@@ -127,6 +127,19 @@ body::before {
   text-transform: uppercase;
   margin-top: 1px;
 }
+@media (max-width: 768px) {
+  .hd-sub           { display: none; }
+  .hd-axis-sub      { display: none; }
+  .hd-axis-pill     { padding: 0 10px; gap: 5px; }
+  .hd-axis-label    { font-size: 10px; }
+  .hd-brand         { padding: 0 14px; gap: 10px; }
+  .hd-meta          { padding: 0 10px; }
+}
+@media (max-width: 480px) {
+  .hd-title         { font-size: 13px; }
+  .hd-axes          { overflow-x: auto; scrollbar-width: none; }
+  .hd-axes::-webkit-scrollbar { display: none; }
+}
 
 .hd-axes {
   display: flex;
@@ -238,6 +251,8 @@ body::before {
   position: relative;
   overflow-x: auto;
   min-height: 100vh;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* SVG connector overlay */
@@ -689,6 +704,89 @@ body::before {
 /* ═══════════════════════════════════════════
    FOOTER INFO BAR
 ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   SCROLL TRACK (sticky mirror scrollbar under header)
+═══════════════════════════════════════════ */
+#scroll-track {
+  position: sticky;
+  top: 56px;          /* height of #app-header */
+  z-index: 190;
+  height: 10px;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  background: var(--ink2);
+  border-bottom: 1px solid var(--ink3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--wire) transparent;
+}
+#scroll-track::-webkit-scrollbar        { height: 6px; }
+#scroll-track::-webkit-scrollbar-thumb  { background: var(--wire); border-radius: 3px; }
+#scroll-track::-webkit-scrollbar-track  { background: transparent; }
+#scroll-track-ghost { height: 1px; display: block; }
+
+/* ── Heatmap densité ── */
+#density-heatmap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+}
+
+/* ── Slider T dans l'info-bar ── */
+#inf-scale-block {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+#inf-scale-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--dust);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  user-select: none;
+}
+#inf-scale-T {
+  color: var(--amber);
+  font-weight: 600;
+}
+#inf-scale-opt {
+  color: var(--dust2);
+  font-size: 7.5px;
+}
+#inf-scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--wire);
+  outline: none;
+  cursor: pointer;
+}
+#inf-scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--amber);
+  cursor: pointer;
+  border: none;
+}
+#inf-scale-slider::-moz-range-thumb {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--amber);
+  cursor: pointer;
+  border: none;
+}
+#inf-entropy-spark {
+  display: inline-block;
+  vertical-align: middle;
+}
+@media (max-width: 768px) { #inf-scale-block { display: none; } }
+
 #info-bar {
   position: fixed;
   bottom: 0;
@@ -708,6 +806,12 @@ body::before {
   letter-spacing: 0.06em;
 }
 #info-bar span { white-space: nowrap; }
+@media (max-width: 600px) {
+  #info-bar { gap: 12px; padding: 0 10px; font-size: 8px; overflow-x: auto; }
+  #info-bar .inf-sep { display: none; }
+  #info-bar #inf-connect-toggle,
+  #info-bar #inf-deploy-ts { display: none; }
+}
 #info-bar .inf-sep { opacity: 0.3; }
 #info-bar #inf-event-count { color: #9db0c8; }
 #info-bar #inf-connect-toggle {
@@ -763,10 +867,14 @@ body::before {
   </div>
 </header>
 
+<!-- SCROLLBAR MIROIR (sticky, synchronisé avec #canvas) -->
+<div id="scroll-track"><span id="scroll-track-ghost"></span></div>
+
 <!-- STAGE -->
 <div id="stage" style="padding-bottom: 60px;">
   <div id="year-spine"></div>
   <div id="canvas">
+    <canvas id="density-heatmap"></canvas>
     <svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     <!-- content injected by JS -->
   </div>
@@ -785,6 +893,14 @@ body::before {
   <span id="inf-integrity" title="Cliquer pour détail intégrité des fichiers" style="cursor:pointer">Intégrité : —</span>
   <span class="inf-sep">·</span>
   <span id="inf-deploy-ts" style="opacity:0.5">—</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-scale-block">
+    <span class="inf-sep" style="opacity:0.3">·</span>
+    <span id="inf-scale-label">Échelle T&nbsp;=&nbsp;<span id="inf-scale-T">—</span>&nbsp;<span id="inf-scale-opt"></span></span>
+    <svg id="inf-entropy-spark" width="60" height="16" viewBox="0 0 60 16"></svg>
+    <input id="inf-scale-slider" type="range" min="0" max="100" value="50"
+           title="Tension temporelle : glisser vers la gauche pour dilater le passé récent">
+  </span>
 </div>
 
 <!-- INTEGRITY PANEL -->
@@ -809,11 +925,30 @@ body::before {
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
 ═══════════════════════════════════════════════════════════ */
-const PX_PER_DAY  = 0.9;   // vertical scale: days → pixels
-const EPOCH_START = new Date('2005-01-01');
-const CANVAS_PAD_TOP  = 48;
+// PX_PER_DAY supprimé — échelle exponentielle dynamique
+const EPOCH_START    = new Date('2005-01-01');
+const CANVAS_PAD_TOP    = 48;
 const CANVAS_PAD_BOTTOM = 80;
 const CANVAS_MIN_WIDTH  = 900;
+const CANVAS_FIXED_H    = 6200;  // hauteur fixe : l'échelle s'adapte, pas la hauteur
+
+// ── Paramètre de tension T (en jours) ──────────────────────
+// Fonction : y = PAD_TOP + (H_usable) * (exp(t/T) - 1) / (exp(D/T) - 1)
+// Petit T → forte dilatation du passé récent ; T→∞ → linéaire
+let SCALE_T       = 1500;   // valeur initiale (jours)
+let SCALE_T_OPT   = 1500;   // T optimal calculé après chargement
+let SCALE_D       = 1;      // durée totale en jours (calculée après chargement)
+const SCALE_T_MIN = 60;
+const SCALE_T_MAX = 30000;
+
+function expScale(tDays) {
+  // Normalise [0, SCALE_D] → [0, 1] selon courbe exponentielle
+  // Petit T : les derniers jours occupent une grande fraction
+  if (SCALE_T > SCALE_D * 50) return tDays / SCALE_D; // quasi-linéaire
+  const num = Math.exp(tDays / SCALE_T) - 1;
+  const den = Math.exp(SCALE_D / SCALE_T) - 1;
+  return num / den;
+}
 
 // FtM schemas that carry event semantics (have a date → rendered on timeline)
 const EVENT_SCHEMAS = new Set(['Event','Payment','Directorship','Ownership','Document','CourtCase']);
@@ -853,7 +988,9 @@ function daysSinceEpoch(date) {
 function dateY(dateStr) {
   const d = parseDate(dateStr);
   if (!d) return CANVAS_PAD_TOP;
-  return Math.round(CANVAS_PAD_TOP + daysSinceEpoch(d) * PX_PER_DAY);
+  const t = daysSinceEpoch(d);
+  const usable = CANVAS_FIXED_H - CANVAS_PAD_TOP - CANVAS_PAD_BOTTOM;
+  return Math.round(CANVAS_PAD_TOP + expScale(Math.max(0, t)) * usable);
 }
 
 function formatDate(s) {
@@ -1045,8 +1182,11 @@ function buildYearSpine() {
     spine.appendChild(block);
   }
 
-  // Total canvas height
-  CANVAS_HEIGHT = CANVAS_PAD_TOP + daysSinceEpoch(lastDate) * PX_PER_DAY + CANVAS_PAD_BOTTOM + 80;
+  // Hauteur fixe — l'échelle exp. s'adapte dans cette enveloppe
+  CANVAS_HEIGHT = CANVAS_FIXED_H;
+
+  // Calibrer SCALE_D sur la plage réelle des événements
+  SCALE_D = Math.max(1, daysSinceEpoch(lastDate));
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1751,6 +1891,151 @@ async function main() {
   setTimeout(() => { loader.classList.add('done'); }, 400);
 }
 
+// ════════════════════════════════════════════════════════════
+// ENTROPIE & OPTIMISATION DE T
+// ════════════════════════════════════════════════════════════
+function computeEntropyForT(T_val, eventDays, totalD, H) {
+  const usable = H - CANVAS_PAD_TOP - CANVAS_PAD_BOTTOM;
+  const den = T_val > totalD * 50
+    ? totalD
+    : Math.exp(totalD / T_val) - 1;
+
+  const positions = eventDays.map(t => {
+    const num = T_val > totalD * 50 ? t : Math.exp(t / T_val) - 1;
+    return CANVAS_PAD_TOP + (num / den) * usable;
+  });
+
+  const N_BUCKETS = 80;
+  const bucketH   = H / N_BUCKETS;
+  const buckets   = new Array(N_BUCKETS).fill(0);
+  for (const p of positions) {
+    const b = Math.min(N_BUCKETS - 1, Math.floor(p / bucketH));
+    buckets[b]++;
+  }
+  let entropy = 0;
+  const n = positions.length;
+  for (const c of buckets) {
+    if (c > 0) entropy -= (c / n) * Math.log(c / n);
+  }
+  return entropy;
+}
+
+function findOptimalT(eventDays, totalD, H) {
+  // 40 valeurs en progression géométrique entre T_MIN et T_MAX
+  const N = 40;
+  const logMin = Math.log(SCALE_T_MIN);
+  const logMax = Math.log(SCALE_T_MAX);
+  let bestT = SCALE_T_MIN, bestEnt = -Infinity;
+  const curve = [];
+  for (let i = 0; i < N; i++) {
+    const T = Math.round(Math.exp(logMin + (logMax - logMin) * i / (N - 1)));
+    const e = computeEntropyForT(T, eventDays, totalD, H);
+    curve.push({ T, e });
+    if (e > bestEnt) { bestEnt = e; bestT = T; }
+  }
+  return { bestT, bestEnt, curve };
+}
+
+function updateScaleUI(curve, optT, curT, optEnt) {
+  // Sparkline
+  const svg = document.getElementById('inf-entropy-spark');
+  if (!svg) return;
+  const W = 60, H2 = 16;
+  const eMin = Math.min(...curve.map(p => p.e));
+  const eMax = Math.max(...curve.map(p => p.e));
+  const eRange = eMax - eMin || 1;
+  const logMin = Math.log(SCALE_T_MIN), logMax = Math.log(SCALE_T_MAX);
+
+  const pts = curve.map(({ T, e }, i) => {
+    const x = (i / (curve.length - 1)) * W;
+    const y = H2 - 2 - ((e - eMin) / eRange) * (H2 - 4);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  // Position curseur courant
+  const curX = ((Math.log(curT) - logMin) / (logMax - logMin)) * W;
+  const optX = ((Math.log(optT) - logMin) / (logMax - logMin)) * W;
+
+  svg.innerHTML = `
+    <polyline points="${pts}" fill="none" stroke="#5a5650" stroke-width="1.2"/>
+    <line x1="${optX.toFixed(1)}" y1="1" x2="${optX.toFixed(1)}" y2="${H2-1}"
+          stroke="#b8a060" stroke-width="1" stroke-dasharray="2 2"/>
+    <circle cx="${curX.toFixed(1)}" cy="${H2/2}" r="2.5" fill="#c8943a"/>
+  `;
+
+  // Texte T courant
+  const Tdays = curT;
+  const Tlabel = Tdays < 365 ? `${Tdays}j`
+               : Tdays < 730 ? `${(Tdays/365).toFixed(1)}an`
+               : `${Math.round(Tdays/365)}ans`;
+  document.getElementById('inf-scale-T').textContent = Tlabel;
+
+  const optLabel = optT < 365 ? `${optT}j`
+                 : optT < 730 ? `${(optT/365).toFixed(1)}an`
+                 : `${Math.round(optT/365)}ans`;
+  const optEl = document.getElementById('inf-scale-opt');
+  if (optEl) optEl.textContent = `(opt: ${optLabel})`;
+}
+
+// ════════════════════════════════════════════════════════════
+// HEATMAP DE DENSITÉ
+// ════════════════════════════════════════════════════════════
+function buildDensityHeatmap() {
+  const hm = document.getElementById('density-heatmap');
+  if (!hm || !EVENTS.length) return;
+
+  hm.width  = CANVAS_WIDTH;
+  hm.height = CANVAS_HEIGHT;
+  hm.style.width  = CANVAS_WIDTH  + 'px';
+  hm.style.height = CANVAS_HEIGHT + 'px';
+
+  const ctx = hm.getContext('2d');
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  // Positions Y de tous les événements
+  const ys = EVENTS.map(ev => dateY(eventDate(ev)));
+
+  // Fenêtre glissante en px (±window_px)
+  const window_px = 60;
+  const STEP      = 3; // px par bande
+  const MAX_ALPHA = 0.22;
+
+  for (let y = CANVAS_PAD_TOP; y < CANVAS_HEIGHT - CANVAS_PAD_BOTTOM; y += STEP) {
+    let count = 0;
+    for (const ey of ys) {
+      if (Math.abs(ey - y) < window_px) count++;
+    }
+    if (count === 0) continue;
+    // Normaliser par rapport au max possible (tous les événements dans la fenêtre)
+    const alpha = Math.min(MAX_ALPHA, (count / Math.max(1, ys.length)) * 6);
+    ctx.fillStyle = `rgba(184, 50, 50, ${alpha.toFixed(3)})`;
+    ctx.fillRect(0, y, CANVAS_WIDTH, STEP);
+  }
+}
+
+// ── Scrollbar miroir ──────────────────────────────────────────
+const scrollTrack  = document.getElementById('scroll-track');
+const scrollGhost  = document.getElementById('scroll-track-ghost');
+const canvasEl     = document.getElementById('canvas');
+
+function syncScrollTrackWidth() {
+  scrollGhost.style.width = (CANVAS_WIDTH + 56) + 'px'; // +year-spine width
+}
+
+let _scrollSyncing = false;
+scrollTrack.addEventListener('scroll', () => {
+  if (_scrollSyncing) return;
+  _scrollSyncing = true;
+  canvasEl.scrollLeft = scrollTrack.scrollLeft;
+  _scrollSyncing = false;
+});
+canvasEl.addEventListener('scroll', () => {
+  if (_scrollSyncing) return;
+  _scrollSyncing = true;
+  scrollTrack.scrollLeft = canvasEl.scrollLeft;
+  _scrollSyncing = false;
+});
+
 // Handle resize
 let resizeTimer;
 window.addEventListener('resize', () => {
@@ -1758,18 +2043,77 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => {
     computeAxisPositions();
     const canvas = document.getElementById('canvas');
-    canvas.innerHTML = '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
-    canvas.style.width = CANVAS_WIDTH + 'px';
+    canvas.innerHTML =
+      '<canvas id="density-heatmap"></canvas>' +
+      '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
+    canvas.style.width  = CANVAS_WIDTH  + 'px';
+    canvas.style.height = CANVAS_HEIGHT + 'px';
+    buildYearSpine();
     buildAxisRails(canvas);
     buildEvents_DOM(canvas);
     const svg = document.getElementById('connector-svg');
-    svg.style.width  = CANVAS_WIDTH + 'px';
+    svg.style.width  = CANVAS_WIDTH  + 'px';
     svg.style.height = CANVAS_HEIGHT + 'px';
     buildConnectors(svg);
+    buildDensityHeatmap();
+    syncScrollTrackWidth();
   }, 200);
 });
 
-main().catch(console.error);
+main().then(() => {
+  syncScrollTrackWidth();
+
+  // ── Calcul T optimal après chargement des données ──
+  if (EVENTS.length) {
+    const eventDays = EVENTS.map(ev => {
+      const d = parseDate(eventDate(ev));
+      return d ? Math.max(0, daysSinceEpoch(d)) : 0;
+    }).filter(t => t >= 0);
+
+    const { bestT, bestEnt, curve } = findOptimalT(eventDays, SCALE_D, CANVAS_FIXED_H);
+    SCALE_T_OPT = bestT;
+    SCALE_T     = bestT;
+
+    // Positionner le slider sur T optimal
+    const slider = document.getElementById('inf-scale-slider');
+    if (slider) {
+      const logMin = Math.log(SCALE_T_MIN), logMax = Math.log(SCALE_T_MAX);
+      const pos = Math.round(((Math.log(bestT) - logMin) / (logMax - logMin)) * 100);
+      slider.value = pos;
+
+      slider.addEventListener('input', () => {
+        const frac = parseInt(slider.value) / 100;
+        SCALE_T = Math.round(Math.exp(logMin + frac * (logMax - logMin)));
+        // Debounce rebuild
+        clearTimeout(slider._timer);
+        slider._timer = setTimeout(() => {
+          computeAxisPositions();
+          const canvas = document.getElementById('canvas');
+          canvas.innerHTML =
+            '<canvas id="density-heatmap"></canvas>' +
+            '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
+          canvas.style.width  = CANVAS_WIDTH  + 'px';
+          canvas.style.height = CANVAS_HEIGHT + 'px';
+          buildYearSpine();
+          buildAxisRails(canvas);
+          buildEvents_DOM(canvas);
+          const svg = document.getElementById('connector-svg');
+          svg.style.width  = CANVAS_WIDTH  + 'px';
+          svg.style.height = CANVAS_HEIGHT + 'px';
+          buildConnectors(svg);
+          buildDensityHeatmap();
+          syncScrollTrackWidth();
+          updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
+        }, 150);
+        // Mise à jour immédiate du label
+        updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
+      });
+    }
+
+    updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
+    buildDensityHeatmap();
+  }
+}).catch(console.error);
 </script>
 </body>
 </html>
