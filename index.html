@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Affaire DeSavoie / Chicherit — Frise</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600&display=swap');
+/* Polices système uniquement — aucune requête externe */
 
 /* ═══════════════════════════════════════════
    TOKENS & RESET
@@ -29,9 +29,9 @@
   --violet:     #6b3fa0;
   --teal:       #1f7a78;
 
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-mono:    'JetBrains Mono', monospace;
-  --font-ui:      'Outfit', sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-mono:    ui-monospace, 'Cascadia Code', 'Consolas', 'Menlo', monospace;
+  --font-ui:      system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --rail-w: 2px;
   --dot-r:  7px;
@@ -793,7 +793,7 @@ body::before {
   width:480px; max-height:320px; overflow-y:auto;
   background:#1a1c22; border:1px solid #2d3040; border-right:none;
   border-radius:4px 0 0 0; z-index:300;
-  font-family:'JetBrains Mono',monospace; font-size:9px;
+  font-family:ui-monospace,'Cascadia Code','Consolas','Menlo',monospace; font-size:9px;
   color:#9a9590; padding:12px 14px;
   box-shadow: -4px -4px 20px rgba(0,0,0,0.3);
 ">
