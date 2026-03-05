@@ -97,10 +97,10 @@
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "102182c9550e58219b3deaa8c68f79e1914eaf3a4c784a488753aa661033c23d",
-      "version": 1,
-      "size": 27016,
-      "deployed": "2026-03-05T17:51:51Z"
+      "sha256": "915b885d1ad4f40e5394c818ccba806aab5e912813eef45ad3c4705c2ed1d2a4",
+      "version": 3,
+      "size": 36248,
+      "deployed": "2026-03-05T22:14:12Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
@@ -148,5 +148,5 @@
       "deployed": "2026-03-05T17:51:51Z"
     }
   ],
-  "_last_deploy": "2026-03-05T19:14:11Z"
+  "_last_deploy": "2026-03-05T22:14:12Z"
 }
