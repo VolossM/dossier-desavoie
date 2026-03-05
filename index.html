@@ -1162,13 +1162,18 @@ function buildYearSpine() {
   const firstYear = firstDate.getFullYear();
   const lastYear  = lastDate.getFullYear() + 1;
 
+  // SCALE_D et CANVAS_HEIGHT doivent être calibrés AVANT tout appel à dateY()
+  SCALE_D       = Math.max(1, daysSinceEpoch(lastDate));
+  CANVAS_HEIGHT = CANVAS_FIXED_H;
+
   spine.innerHTML = '';
 
   for (let y = firstYear; y <= lastYear; y++) {
     const yDate  = new Date(y, 0, 1);
     const yY     = dateY(yDate.toISOString().slice(0,10));
-    const yNext  = dateY(`${y+1}-01-01`);
-    const height = yNext - yY;
+    // Pour le dernier bloc : plafonner à CANVAS_FIXED_H pour éviter le dépassement
+    const yNext  = Math.min(CANVAS_FIXED_H, dateY(`${y+1}-01-01`));
+    const height = Math.max(0, yNext - yY);
 
     const block = document.createElement('div');
     block.className = 'yr-block';
@@ -1181,12 +1186,6 @@ function buildYearSpine() {
     block.appendChild(label);
     spine.appendChild(block);
   }
-
-  // Hauteur fixe — l'échelle exp. s'adapte dans cette enveloppe
-  CANVAS_HEIGHT = CANVAS_FIXED_H;
-
-  // Calibrer SCALE_D sur la plage réelle des événements
-  SCALE_D = Math.max(1, daysSinceEpoch(lastDate));
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1868,11 +1867,11 @@ async function main() {
 
   // 4. Rendu
   const canvas = document.getElementById('canvas');
-  canvas.style.width  = CANVAS_WIDTH  + 'px';
-  canvas.style.height = CANVAS_HEIGHT + 'px';
+  canvas.style.width    = CANVAS_WIDTH + 'px';
   canvas.style.position = 'relative';
 
-  buildYearSpine();
+  buildYearSpine();  // fixe CANVAS_HEIGHT et SCALE_D
+  canvas.style.height = CANVAS_HEIGHT + 'px';
   buildAxisRails(canvas);
   buildHeaderAxes();
   buildEvents_DOM(canvas);
@@ -2046,9 +2045,9 @@ window.addEventListener('resize', () => {
     canvas.innerHTML =
       '<canvas id="density-heatmap"></canvas>' +
       '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
-    canvas.style.width  = CANVAS_WIDTH  + 'px';
+    canvas.style.width  = CANVAS_WIDTH + 'px';
+    buildYearSpine();  // fixe CANVAS_HEIGHT
     canvas.style.height = CANVAS_HEIGHT + 'px';
-    buildYearSpine();
     buildAxisRails(canvas);
     buildEvents_DOM(canvas);
     const svg = document.getElementById('connector-svg');
@@ -2092,9 +2091,9 @@ main().then(() => {
           canvas.innerHTML =
             '<canvas id="density-heatmap"></canvas>' +
             '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
-          canvas.style.width  = CANVAS_WIDTH  + 'px';
+          canvas.style.width  = CANVAS_WIDTH + 'px';
+          buildYearSpine();  // fixe CANVAS_HEIGHT
           canvas.style.height = CANVAS_HEIGHT + 'px';
-          buildYearSpine();
           buildAxisRails(canvas);
           buildEvents_DOM(canvas);
           const svg = document.getElementById('connector-svg');
