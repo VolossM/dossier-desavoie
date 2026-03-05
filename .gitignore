@@ -1,0 +1,13 @@
+# Downloads — exclure tout par defaut
+*
+
+# Reintegrer uniquement les fichiers du projet DeSavoie/Chicherit
+!index.html
+!setup.py
+!deploy.py
+!manifest.json
+!init_git.py
+!.gitignore
+!.deploy_config.json
+!data/
+!data/*.jsonl
