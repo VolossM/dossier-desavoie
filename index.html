@@ -1991,23 +1991,57 @@ function buildDensityHeatmap() {
   const ctx = hm.getContext('2d');
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // Positions Y de tous les événements
-  const ys = EVENTS.map(ev => dateY(eventDate(ev)));
+  // ── Palette neutre-chaude (facilement modifiable) ──────────
+  // Chaque entrée : [r, g, b] — le cycle interpolera entre elles
+  const PALETTE = [
+    [24,  24,  22],   // fond sombre (quasi-noir chaud)
+    [38,  31,  22],   // brun-ardoise
+    [52,  40,  24],   // ocre profond
+    [62,  50,  36],   // brun-beige
+    [72,  60,  44],   // beige chaud
+    [58,  46,  32],   // retour ocre
+    [38,  31,  22],   // retour brun
+  ];
+  const MAX_ALPHA = 0.13;
 
-  // Fenêtre glissante en px (±window_px)
-  const window_px = 60;
-  const STEP      = 3; // px par bande
-  const MAX_ALPHA = 0.22;
+  // ── Cycle adaptatif : 1 cycle = SCALE_T jours ──────────────
+  // On mappe les jours → position dans le cycle [0, 1[
+  // puis on interpole la palette.
+  const STEP = 2; // px par bande
+  const usable = CANVAS_HEIGHT - CANVAS_PAD_TOP - CANVAS_PAD_BOTTOM;
+
+  // Précalcul : pour chaque px Y, retrouver le temps en jours
+  // via inversion numérique de expScale (par dichotomie)
+  function yToDays(yPx) {
+    // Inverse expScale : trouver t tel que dateY(t) ≈ yPx
+    const target = (yPx - CANVAS_PAD_TOP) / usable; // [0,1]
+    if (target <= 0) return 0;
+    if (target >= 1) return SCALE_D;
+    if (SCALE_T > SCALE_D * 50) return target * SCALE_D; // linéaire
+    // Inversion analytique : t = T * ln(1 + target*(e^(D/T)-1))
+    const den = Math.exp(SCALE_D / SCALE_T) - 1;
+    return SCALE_T * Math.log(1 + target * den);
+  }
+
+  function samplePalette(phase) {
+    // phase ∈ [0, 1[ → couleur interpolée dans PALETTE (cycle)
+    const n = PALETTE.length;
+    const scaled = ((phase % 1) + 1) % 1 * n;
+    const i0 = Math.floor(scaled) % n;
+    const i1 = (i0 + 1) % n;
+    const f  = scaled - Math.floor(scaled);
+    const r  = PALETTE[i0][0] + f * (PALETTE[i1][0] - PALETTE[i0][0]);
+    const g  = PALETTE[i0][1] + f * (PALETTE[i1][1] - PALETTE[i0][1]);
+    const b  = PALETTE[i0][2] + f * (PALETTE[i1][2] - PALETTE[i0][2]);
+    return [Math.round(r), Math.round(g), Math.round(b)];
+  }
 
   for (let y = CANVAS_PAD_TOP; y < CANVAS_HEIGHT - CANVAS_PAD_BOTTOM; y += STEP) {
-    let count = 0;
-    for (const ey of ys) {
-      if (Math.abs(ey - y) < window_px) count++;
-    }
-    if (count === 0) continue;
-    // Normaliser par rapport au max possible (tous les événements dans la fenêtre)
-    const alpha = Math.min(MAX_ALPHA, (count / Math.max(1, ys.length)) * 6);
-    ctx.fillStyle = `rgba(184, 50, 50, ${alpha.toFixed(3)})`;
+    const tDays = yToDays(y);
+    // Phase = combien de cycles de SCALE_T jours se sont écoulés
+    const phase = (tDays / SCALE_T) % 1;
+    const [r, g, b] = samplePalette(phase);
+    ctx.fillStyle = `rgba(${r},${g},${b},${MAX_ALPHA})`;
     ctx.fillRect(0, y, CANVAS_WIDTH, STEP);
   }
 }
