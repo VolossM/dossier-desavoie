@@ -269,7 +269,8 @@ body::before {
 /* ═══════════════════════════════════════════
    AXIS RAILS (continuous horizontal positions)
 ═══════════════════════════════════════════ */
-.axis-rail {
+.axis-rail { display: none; }
+._axis-rail-hidden {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -364,8 +365,7 @@ body::before {
   box-shadow: 0 6px 24px rgba(10,11,13,0.12), 0 2px 6px rgba(10,11,13,0.06);
   transform: translateY(-1px);
 }
-.ev-card.left  { right: calc(var(--dot-r) + 10px); }
-.ev-card.right { left:  calc(var(--dot-r) + 10px); }
+.ev-card.right { left: calc(var(--dot-r) + 10px); }
 
 .ev-card-date {
   font-family: var(--font-mono);
@@ -1232,11 +1232,7 @@ function buildAxisRails(canvas) {
 /* ═══════════════════════════════════════════════════════════
    CARD SIDE (left/right alternation per axis to avoid overlap)
 ═══════════════════════════════════════════════════════════ */
-const axisSideCounter = {};
-function cardSide(axisId) {
-  axisSideCounter[axisId] = (axisSideCounter[axisId] || 0) + 1;
-  return axisSideCounter[axisId] % 2 === 0 ? 'left' : 'right';
-}
+// cardSide supprimé — toutes les cartes à droite de leur axe
 
 /* ═══════════════════════════════════════════════════════════
    EVENT NODES
@@ -1275,9 +1271,8 @@ function buildEvents_DOM(canvas) {
     anchor.appendChild(dot);
 
     // Card
-    const side = cardSide(ev._resolvedAxis);
     const card = document.createElement('div');
-    card.className = `ev-card ${side}${isAlert(ev)?' is-alert':''}`;
+    card.className = `ev-card right${isAlert(ev)?' is-alert':''}`;
     card.style.borderLeftColor = ax.color;
 
     const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'), p1(ev,'amountCurrency')||p1(ev,'currency'));
