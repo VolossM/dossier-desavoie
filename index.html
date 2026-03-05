@@ -1,11 +1,1775 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=habitat-indigne-paris-v2.html">
-    <title>Redirection...</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affaire DeSavoie / Chicherit — Frise</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600&display=swap');
+
+/* ═══════════════════════════════════════════
+   TOKENS & RESET
+═══════════════════════════════════════════ */
+:root {
+  --ink:        #0a0b0d;
+  --ink2:       #1a1c22;
+  --ink3:       #252830;
+  --smoke:      #f2f1ee;
+  --smoke2:     #e8e6e2;
+  --smoke3:     #d4d1cb;
+  --dust:       #9a9590;
+  --dust2:      #6b6762;
+  --wire:       #d0cdc8;
+  --wire2:      #e6e4e0;
+
+  --red:        #b83232;
+  --amber:      #c8821a;
+  --gold:       #b89a20;
+  --green:      #2a7a4e;
+  --violet:     #6b3fa0;
+  --teal:       #1f7a78;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --font-ui:      'Outfit', sans-serif;
+
+  --rail-w: 2px;
+  --dot-r:  7px;
+  --card-w: 220px;
+  --year-w: 56px;
+  --pad-v:  18px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--smoke);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   GRAIN OVERLAY (atmosphere)
+═══════════════════════════════════════════ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.6;
+}
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+#app-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: var(--ink2);
+  border-bottom: 1px solid var(--ink3);
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  height: 56px;
+}
+
+.hd-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  border-right: 1px solid var(--ink3);
+  flex-shrink: 0;
+}
+
+.hd-brand .sigil {
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--red);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hd-brand .sigil span {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--red);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.hd-titles { display: flex; flex-direction: column; justify-content: center; }
+.hd-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8e5e0;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+.hd-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--dust);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.hd-axes {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.hd-axis-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 18px;
+  height: 100%;
+  border-right: 1px solid var(--ink3);
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+.hd-axis-pill:hover { background: rgba(255,255,255,0.04); }
+.hd-axis-pill.muted { opacity: 0.35; }
+
+.hd-axis-pip {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.hd-axis-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: #c8c4be;
+  white-space: nowrap;
+}
+.hd-axis-sub {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--dust);
+  white-space: nowrap;
+}
+
+.hd-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.hd-badge {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+  border: 1px solid rgba(184,50,50,0.4);
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT: STAGE + YEAR SPINE
+═══════════════════════════════════════════ */
+#stage {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+/* ── Year spine ── */
+#year-spine {
+  position: sticky;
+  left: 0;
+  z-index: 100;
+  width: var(--year-w);
+  flex-shrink: 0;
+  background: var(--smoke);
+  border-right: var(--rail-w) solid var(--wire);
+}
+
+.yr-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: var(--pad-v);
+  border-bottom: 1px solid var(--wire2);
+}
+
+.yr-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--dust2);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  user-select: none;
+  flex: 1;
+  padding-bottom: 12px;
+}
+
+/* ── Canvas: the scrollable timeline ── */
+#canvas {
+  flex: 1;
+  position: relative;
+  overflow-x: auto;
+  min-height: 100vh;
+}
+
+/* SVG connector overlay */
+#connector-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ═══════════════════════════════════════════
+   AXIS RAILS (continuous horizontal positions)
+═══════════════════════════════════════════ */
+.axis-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--rail-w);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.axis-rail-line {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+}
+
+/* ─ axis column header label ─ */
+.axis-col-header {
+  position: sticky;
+  top: 56px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════
+   EVENT CARDS
+═══════════════════════════════════════════ */
+.ev-anchor {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.ev-dot {
+  width: calc(var(--dot-r)*2);
+  height: calc(var(--dot-r)*2);
+  border-radius: 50%;
+  border: 2px solid var(--smoke);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+  z-index: 3;
+}
+.ev-dot:hover {
+  transform: translateX(-50%) scale(1.45);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.35);
+}
+.ev-dot.alert-dot {
+  animation: pulse-alert 2.8s ease-in-out infinite;
+}
+@keyframes pulse-alert {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184,50,50,0); }
+  50%       { box-shadow: 0 0 0 6px rgba(184,50,50,0.25); }
+}
+
+/* Segment bar for events with duration */
+.ev-segment {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  border-radius: 2px;
+  opacity: 0.35;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* The floating card */
+.ev-card {
+  position: absolute;
+  width: var(--card-w);
+  top: calc(var(--dot-r) - 2px);
+  background: #fff;
+  border: 1px solid var(--wire);
+  border-radius: 4px;
+  padding: 10px 12px 9px;
+  box-shadow: 0 2px 12px rgba(10,11,13,0.07), 0 1px 3px rgba(10,11,13,0.04);
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s var(--ease-out), opacity 0.15s;
+  border-left: 3px solid transparent;
+  z-index: 4;
+  opacity: 0;
+  animation: card-in 0.35s var(--ease-out) forwards;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ev-card:hover {
+  box-shadow: 0 6px 24px rgba(10,11,13,0.12), 0 2px 6px rgba(10,11,13,0.06);
+  transform: translateY(-1px);
+}
+.ev-card.left  { right: calc(var(--dot-r) + 10px); }
+.ev-card.right { left:  calc(var(--dot-r) + 10px); }
+
+.ev-card-date {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dust);
+  margin-bottom: 3px;
+}
+.ev-card-title {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.ev-card-desc {
+  font-size: 11px;
+  color: var(--dust2);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ev-card-amount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  margin-top: 5px;
+}
+.ev-card-schema {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dust);
+  margin-top: 5px;
+  opacity: 0.7;
+}
+
+/* alert badge */
+.ev-card.is-alert .ev-card-title::before {
+  content: '⚠ ';
+  color: var(--red);
+  font-style: normal;
+  font-family: var(--font-ui);
+}
+
+/* muted state */
+.ev-anchor.axis-hidden { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+
+/* ═══════════════════════════════════════════
+   CONNECTOR LINES (SVG)
+═══════════════════════════════════════════ */
+.connector-line {
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  fill: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.connector-line.visible { opacity: 0.5; }
+
+/* ═══════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════ */
+#modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,11,13,0.45);
+  z-index: 500;
+  display: none;
+  align-items: flex-start;
+  justify-content: flex-end;
+  backdrop-filter: blur(3px);
+}
+#modal-backdrop.open { display: flex; }
+
+#modal-panel {
+  width: 420px;
+  max-width: 95vw;
+  height: 100vh;
+  background: #fff;
+  border-left: 1px solid var(--wire);
+  display: flex;
+  flex-direction: column;
+  animation: slide-in 0.28s var(--ease-out);
+  overflow: hidden;
+}
+@keyframes slide-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+#modal-header {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--wire2);
+  flex-shrink: 0;
+}
+.modal-axis-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.modal-schema-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dust);
+  margin-left: 6px;
+}
+#modal-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+#modal-date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--dust);
+  letter-spacing: 0.06em;
+}
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px; height: 30px;
+  border: none;
+  background: var(--smoke2);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--dust2);
+  transition: background 0.15s;
+}
+.modal-close:hover { background: var(--smoke3); }
+
+#modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+#modal-body::-webkit-scrollbar { width: 4px; }
+#modal-body::-webkit-scrollbar-thumb { background: var(--wire); border-radius: 2px; }
+
+.modal-section-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dust);
+  margin-bottom: 6px;
+}
+
+.modal-description {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink2);
+}
+
+.modal-amount {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.modal-prop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+.modal-prop { display: flex; flex-direction: column; gap: 2px; }
+.modal-prop-key {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dust);
+}
+.modal-prop-val {
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.modal-refs { display: flex; flex-direction: column; gap: 8px; }
+.modal-ref-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--smoke);
+  border-radius: 3px;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.modal-ref-card:hover { background: var(--smoke2); }
+.modal-ref-schema {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.modal-ref-name {
+  font-size: 12px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-source-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--smoke);
+  border-radius: 3px;
+  text-decoration: none;
+  transition: background 0.12s;
+  border: 1px solid var(--wire2);
+}
+.modal-source-link:hover { background: var(--smoke2); }
+.modal-source-icon { font-size: 12px; flex-shrink: 0; }
+.modal-source-text { display: flex; flex-direction: column; min-width: 0; }
+.modal-source-label { font-size: 11px; font-weight: 500; color: var(--ink); }
+.modal-source-url {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--dust);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ═══════════════════════════════════════════
+   LOADER / ERROR
+═══════════════════════════════════════════ */
+#loader {
+  position: fixed;
+  inset: 0;
+  background: var(--smoke);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 999;
+  transition: opacity 0.3s;
+}
+#loader.done { opacity: 0; pointer-events: none; }
+
+.loader-sigil {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 300;
+  color: var(--dust);
+  animation: loader-pulse 1.8s ease-in-out infinite;
+}
+@keyframes loader-pulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1; }
+}
+.loader-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dust);
+}
+.loader-files { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.loader-file {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--dust);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.loader-file.done { color: var(--green); }
+.loader-file .lf-icon { font-size: 10px; }
+
+/* ═══════════════════════════════════════════
+   TOOLTIP
+═══════════════════════════════════════════ */
+#tooltip {
+  position: fixed;
+  background: var(--ink2);
+  color: #e8e5e0;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 800;
+  max-width: 220px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  display: none;
+  line-height: 1.5;
+}
+#tooltip.visible { display: block; }
+#tooltip strong {
+  font-family: var(--font-display);
+  font-size: 13px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER INFO BAR
+═══════════════════════════════════════════ */
+#info-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: var(--ink2);
+  border-top: 1px solid var(--ink3);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 16px;
+  z-index: 150;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--dust);
+  letter-spacing: 0.06em;
+}
+#info-bar span { white-space: nowrap; }
+#info-bar .inf-sep { opacity: 0.3; }
+#info-bar #inf-event-count { color: #9db0c8; }
+#info-bar #inf-connect-toggle {
+  cursor: pointer;
+  color: var(--dust);
+  transition: color 0.15s;
+  user-select: none;
+}
+#info-bar #inf-connect-toggle:hover { color: #c8c4be; }
+#info-bar #inf-connect-toggle.active { color: var(--amber); }
+</style>
 </head>
 <body>
-    <p>Redirection vers <a href="habitat-indigne-paris-v2.html">l'outil d'analyse</a>...</p>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-sigil">✦</div>
+  <div class="loader-text">Chargement du dossier</div>
+  <div class="loader-files" id="loader-files"></div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip"></div>
+
+<!-- MODAL -->
+<div id="modal-backdrop">
+  <div id="modal-panel" style="position:relative">
+    <div id="modal-header">
+      <div>
+        <span id="modal-axis-tag" class="modal-axis-tag"></span>
+        <span id="modal-schema-tag" class="modal-schema-tag"></span>
+      </div>
+      <h2 id="modal-title"></h2>
+      <div id="modal-date"></div>
+    </div>
+    <div id="modal-body"></div>
+    <button class="modal-close" id="modal-close">✕</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header id="app-header">
+  <div class="hd-brand">
+    <div class="sigil"><span>D</span></div>
+    <div class="hd-titles">
+      <div class="hd-title" id="hd-title-el">Affaire DeSavoie / Chicherit</div>
+      <div class="hd-sub" id="hd-sub-el">Chargement…</div>
+    </div>
+  </div>
+  <div class="hd-axes" id="hd-axes"></div>
+  <div class="hd-meta">
+    <div class="hd-badge" id="hd-badge">CONFIDENTIEL</div>
+  </div>
+</header>
+
+<!-- STAGE -->
+<div id="stage" style="padding-bottom: 60px;">
+  <div id="year-spine"></div>
+  <div id="canvas">
+    <svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <!-- content injected by JS -->
+  </div>
+</div>
+
+<!-- INFO BAR -->
+<div id="info-bar">
+  <span id="inf-event-count">—</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-entity-count">—</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-file-count">—</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-connect-toggle" title="Afficher/masquer les connexions entre entités liées">Connexions : OFF</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-integrity" title="Cliquer pour détail intégrité des fichiers" style="cursor:pointer">Intégrité : —</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-deploy-ts" style="opacity:0.5">—</span>
+</div>
+
+<!-- INTEGRITY PANEL -->
+<div id="integrity-panel" style="
+  display:none; position:fixed; bottom:28px; right:0;
+  width:480px; max-height:320px; overflow-y:auto;
+  background:#1a1c22; border:1px solid #2d3040; border-right:none;
+  border-radius:4px 0 0 0; z-index:300;
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:#9a9590; padding:12px 14px;
+  box-shadow: -4px -4px 20px rgba(0,0,0,0.3);
+">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <span style="color:#e8e5e0;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Intégrité des fichiers</span>
+    <span id="integrity-close" style="cursor:pointer;color:#6b6762;font-size:14px;line-height:1;">✕</span>
+  </div>
+  <div id="integrity-rows"></div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════════════ */
+const PX_PER_DAY  = 0.9;   // vertical scale: days → pixels
+const EPOCH_START = new Date('2005-01-01');
+const CANVAS_PAD_TOP  = 48;
+const CANVAS_PAD_BOTTOM = 80;
+const CANVAS_MIN_WIDTH  = 900;
+
+// FtM schemas that carry event semantics (have a date → rendered on timeline)
+const EVENT_SCHEMAS = new Set(['Event','Payment','Directorship','Ownership','Document','CourtCase']);
+// schemas rendered as context nodes (resolved in modal, not on timeline)
+const CONTEXT_SCHEMAS = new Set(['Person','Company','LegalEntity']);
+
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+let MANIFEST = null;
+let ENTITIES  = {};        // id → entity (deduplicated, merged)
+let EVENTS    = [];        // event-bearing entities, sorted by date
+let AXIS_MAP  = {};        // axisId → axis config
+let MUTED_AXES = new Set();
+let SHOW_CONNECTORS = false;
+let CANVAS_WIDTH = 0;
+let CANVAS_HEIGHT = 0;
+
+/* ═══════════════════════════════════════════════════════════
+   DATE UTILITIES
+═══════════════════════════════════════════════════════════ */
+function parseDate(s) {
+  if (!s) return null;
+  const p = s.trim().split('-');
+  const y = parseInt(p[0]);
+  const m = p[1] ? parseInt(p[1]) - 1 : 0;
+  const d = p[2] ? parseInt(p[2]) : 1;
+  if (isNaN(y)) return null;
+  return new Date(y, m, d);
+}
+
+function daysSinceEpoch(date) {
+  if (!date) return 0;
+  return (date - EPOCH_START) / 86400000;
+}
+
+function dateY(dateStr) {
+  const d = parseDate(dateStr);
+  if (!d) return CANVAS_PAD_TOP;
+  return Math.round(CANVAS_PAD_TOP + daysSinceEpoch(d) * PX_PER_DAY);
+}
+
+function formatDate(s) {
+  if (!s) return '';
+  const MONTHS = ['jan.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  const p = s.trim().split('-');
+  const y = p[0];
+  const m = p[1] ? MONTHS[parseInt(p[1])-1] : null;
+  const d = p[2] ? parseInt(p[2]) : null;
+  if (d && m) return `${d} ${m} ${y}`;
+  if (m) return `${m} ${y}`;
+  return y;
+}
+
+function formatAmount(raw, currency) {
+  if (!raw) return null;
+  const n = parseFloat(raw);
+  if (isNaN(n)) return null;
+  const abs = Math.abs(n);
+  let val;
+  if (abs >= 1e9) val = (n/1e9).toFixed(1).replace(/\.0$/,'') + ' Md';
+  else if (abs >= 1e6) val = (n/1e6).toFixed(0) + ' M';
+  else if (abs >= 1e3) val = (n/1e3).toFixed(0) + ' K';
+  else val = n.toFixed(0);
+  const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : (currency || '');
+  return `${val} ${sym}`.trim();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FtM PROPERTY HELPERS
+═══════════════════════════════════════════════════════════ */
+const p1 = (e, k) => (e.properties?.[k] || [])[0] || null;
+const pAll = (e, k) => e.properties?.[k] || [];
+
+function eventDate(e) {
+  return p1(e,'date') || p1(e,'startDate') || p1(e,'incorporationDate') || null;
+}
+function eventEndDate(e) {
+  return p1(e,'endDate') || p1(e,'dissolutionDate') || null;
+}
+function eventName(e) {
+  return p1(e,'name') || p1(e,'fileName') || p1(e,'eventLabel') || e.schema;
+}
+function eventDesc(e) {
+  return p1(e,'description') || p1(e,'text') || null;
+}
+function entityAxis(e) {
+  return p1(e,'axis') || null;
+}
+function isAlert(e) {
+  const a = p1(e,'alert');
+  return a === 'true' || a === true;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DEDUPLICATION / MERGE
+═══════════════════════════════════════════════════════════ */
+function mergeEntity(existing, incoming) {
+  if (!existing) return incoming;
+  const merged = { ...existing };
+  merged.properties = { ...existing.properties };
+  for (const [k, vals] of Object.entries(incoming.properties || {})) {
+    const cur = merged.properties[k] || [];
+    merged.properties[k] = [...new Set([...cur, ...vals])];
+  }
+  return merged;
+}
+
+function ingestLine(line, fileAxisId) {
+  line = line.trim();
+  if (!line || line.startsWith('//')) return;
+  let ent;
+  try { ent = JSON.parse(line); } catch { return; }
+  if (!ent.id || !ent.schema) return;
+
+  // If entity has no axis and file has a default axis, assign it
+  if (!entityAxis(ent) && fileAxisId) {
+    ent = { ...ent, properties: { ...ent.properties, axis: [fileAxisId] } };
+  }
+
+  ENTITIES[ent.id] = mergeEntity(ENTITIES[ent.id], ent);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AXIS POSITION (continuous, 0–1 → pixels)
+═══════════════════════════════════════════════════════════ */
+function axisX(axisId) {
+  const ax = AXIS_MAP[axisId];
+  if (!ax) return CANVAS_WIDTH * 0.5;
+  return ax._xPx;
+}
+
+function computeAxisPositions() {
+  CANVAS_WIDTH = Math.max(CANVAS_MIN_WIDTH, window.innerWidth - 56);
+  const usable = CANVAS_WIDTH - 80; // padding left+right
+  const left   = 40;
+  for (const ax of Object.values(AXIS_MAP)) {
+    ax._xPx = Math.round(left + ax.position * usable);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DYNAMIC AXIS ASSIGNMENT (for events without explicit axis)
+═══════════════════════════════════════════════════════════ */
+function assignDynamicAxis(ev) {
+  const existing = entityAxis(ev);
+  if (existing && AXIS_MAP[existing]) return existing;
+
+  const refs = pAll(ev,'ftmRef');
+  if (!refs.length) return Object.keys(AXIS_MAP)[0] || null;
+
+  // Count how many ftmRef entities belong to each axis
+  const scores = {};
+  for (const id of refs) {
+    const ref = ENTITIES[id];
+    if (!ref) continue;
+    const ax = entityAxis(ref);
+    if (ax && AXIS_MAP[ax]) scores[ax] = (scores[ax]||0) + 1;
+  }
+
+  if (!Object.keys(scores).length) {
+    // Fallback: check anchor_entities
+    for (const [axId, ax] of Object.entries(AXIS_MAP)) {
+      if ((ax.anchor_entities||[]).some(a => refs.includes(a))) {
+        scores[axId] = (scores[axId]||0) + 2;
+      }
+    }
+  }
+
+  if (!Object.keys(scores).length) return null;
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BUILD EVENTS LIST
+═══════════════════════════════════════════════════════════ */
+function buildEvents() {
+  EVENTS = [];
+  for (const ent of Object.values(ENTITIES)) {
+    if (!EVENT_SCHEMAS.has(ent.schema)) continue;
+    const date = eventDate(ent);
+    if (!date) continue;
+    const axis = assignDynamicAxis(ent) || assignFallbackAxis(ent);
+    if (!axis) continue;
+    ent._resolvedAxis = axis;
+    EVENTS.push(ent);
+  }
+  EVENTS.sort((a,b) => {
+    const da = parseDate(eventDate(a));
+    const db = parseDate(eventDate(b));
+    return (da||0) - (db||0);
+  });
+}
+
+function assignFallbackAxis(ev) {
+  // Last resort: use file default stored on entity
+  return entityAxis(ev) || Object.keys(AXIS_MAP)[0] || null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   YEAR SPINE
+═══════════════════════════════════════════════════════════ */
+function buildYearSpine() {
+  const spine = document.getElementById('year-spine');
+  if (!EVENTS.length) return;
+
+  const firstDate = parseDate(eventDate(EVENTS[0]));
+  const lastDate  = parseDate(eventDate(EVENTS[EVENTS.length-1]));
+  const firstYear = firstDate.getFullYear();
+  const lastYear  = lastDate.getFullYear() + 1;
+
+  spine.innerHTML = '';
+
+  for (let y = firstYear; y <= lastYear; y++) {
+    const yDate  = new Date(y, 0, 1);
+    const yY     = dateY(yDate.toISOString().slice(0,10));
+    const yNext  = dateY(`${y+1}-01-01`);
+    const height = yNext - yY;
+
+    const block = document.createElement('div');
+    block.className = 'yr-block';
+    block.style.height = height + 'px';
+    block.setAttribute('data-year', y);
+
+    const label = document.createElement('div');
+    label.className = 'yr-label';
+    label.textContent = y;
+    block.appendChild(label);
+    spine.appendChild(block);
+  }
+
+  // Total canvas height
+  CANVAS_HEIGHT = CANVAS_PAD_TOP + daysSinceEpoch(lastDate) * PX_PER_DAY + CANVAS_PAD_BOTTOM + 80;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AXIS RAILS
+═══════════════════════════════════════════════════════════ */
+function buildAxisRails(canvas) {
+  for (const ax of Object.values(AXIS_MAP)) {
+    // Rail line
+    const rail = document.createElement('div');
+    rail.className = 'axis-rail';
+    rail.id = `rail-${ax.id}`;
+    rail.style.left = ax._xPx + 'px';
+    rail.style.height = CANVAS_HEIGHT + 'px';
+
+    const line = document.createElement('div');
+    line.className = 'axis-rail-line';
+    line.style.background = ax.color;
+    line.style.height = '100%';
+    line.style.width = '1px';
+    rail.appendChild(line);
+
+    canvas.appendChild(rail);
+
+    // Sticky column header
+    const hdr = document.createElement('div');
+    hdr.className = 'axis-col-header';
+    hdr.id = `col-hdr-${ax.id}`;
+    hdr.style.cssText = `
+      position:absolute;
+      left:${ax._xPx - 60}px;
+      top:0;
+      width:120px;
+      text-align:center;
+      padding-top:10px;
+      pointer-events:none;
+    `;
+    hdr.innerHTML = `
+      <div style="font-family:var(--font-mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:${ax.color};opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ax.label}</div>
+    `;
+    canvas.appendChild(hdr);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CARD SIDE (left/right alternation per axis to avoid overlap)
+═══════════════════════════════════════════════════════════ */
+const axisSideCounter = {};
+function cardSide(axisId) {
+  axisSideCounter[axisId] = (axisSideCounter[axisId] || 0) + 1;
+  return axisSideCounter[axisId] % 2 === 0 ? 'left' : 'right';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EVENT NODES
+═══════════════════════════════════════════════════════════ */
+function buildEvents_DOM(canvas) {
+  for (const ev of EVENTS) {
+    const ax = AXIS_MAP[ev._resolvedAxis];
+    if (!ax) continue;
+
+    const y = dateY(eventDate(ev));
+    const x = ax._xPx;
+    const anchor = document.createElement('div');
+    anchor.className = 'ev-anchor';
+    anchor.id = `ev-${ev.id}`;
+    anchor.setAttribute('data-axis', ev._resolvedAxis);
+    anchor.style.left  = x + 'px';
+    anchor.style.top   = y + 'px';
+
+    // Segment bar for duration events (Directorship etc.)
+    const endDate = eventEndDate(ev);
+    if (endDate) {
+      const yEnd = dateY(endDate);
+      const seg = document.createElement('div');
+      seg.className = 'ev-segment';
+      seg.style.top    = '0px';
+      seg.style.height = (yEnd - y) + 'px';
+      seg.style.background = ax.color;
+      anchor.appendChild(seg);
+    }
+
+    // Dot
+    const dot = document.createElement('div');
+    dot.className = 'ev-dot' + (isAlert(ev) ? ' alert-dot' : '');
+    dot.style.background = ax.color;
+    dot.style.top = (-7) + 'px';
+    anchor.appendChild(dot);
+
+    // Card
+    const side = cardSide(ev._resolvedAxis);
+    const card = document.createElement('div');
+    card.className = `ev-card ${side}${isAlert(ev)?' is-alert':''}`;
+    card.style.borderLeftColor = ax.color;
+
+    const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'), p1(ev,'amountCurrency')||p1(ev,'currency'));
+    const dateStr = eventDate(ev);
+    const endStr  = eventEndDate(ev);
+    const dateDisplay = endStr
+      ? `${formatDate(dateStr)} – ${formatDate(endStr)}`
+      : formatDate(dateStr);
+
+    card.innerHTML = `
+      <div class="ev-card-date">${dateDisplay}</div>
+      <div class="ev-card-title">${esc(eventName(ev))}</div>
+      ${eventDesc(ev) ? `<div class="ev-card-desc">${esc(eventDesc(ev))}</div>` : ''}
+      ${amount ? `<span class="ev-card-amount" style="color:${ax.color}">${esc(amount)}</span>` : ''}
+      <div class="ev-card-schema">${ev.schema}</div>
+    `;
+
+    // Events
+    dot.addEventListener('mouseenter', (e) => showTooltip(e, ev));
+    dot.addEventListener('mouseleave',  hideTooltip);
+    card.addEventListener('click', () => openModal(ev));
+    dot.addEventListener('click',  () => openModal(ev));
+
+    // Connector highlight on hover
+    dot.addEventListener('mouseenter', () => highlightConnectors(ev.id));
+    dot.addEventListener('mouseleave',  clearConnectorHighlights);
+    card.addEventListener('mouseenter', () => highlightConnectors(ev.id));
+    card.addEventListener('mouseleave',  clearConnectorHighlights);
+
+    anchor.appendChild(card);
+    canvas.appendChild(anchor);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONNECTOR LINES (SVG)
+═══════════════════════════════════════════════════════════ */
+let connectorMap = {}; // sharedEntityId → [evId, …]
+
+function buildConnectors(svg) {
+  connectorMap = {};
+
+  // Group events by shared ftmRef
+  for (const ev of EVENTS) {
+    for (const ref of pAll(ev,'ftmRef')) {
+      if (!connectorMap[ref]) connectorMap[ref] = [];
+      connectorMap[ref].push(ev.id);
+    }
+  }
+
+  svg.innerHTML = '';
+  svg.style.width  = CANVAS_WIDTH + 'px';
+  svg.style.height = CANVAS_HEIGHT + 'px';
+
+  for (const [refId, evIds] of Object.entries(connectorMap)) {
+    if (evIds.length < 2) continue;
+    // Draw lines between consecutive pairs
+    for (let i = 0; i < evIds.length - 1; i++) {
+      const a = EVENTS.find(e => e.id === evIds[i]);
+      const b = EVENTS.find(e => e.id === evIds[i+1]);
+      if (!a || !b) continue;
+
+      const ax1 = AXIS_MAP[a._resolvedAxis];
+      const ax2 = AXIS_MAP[b._resolvedAxis];
+      if (!ax1 || !ax2) continue;
+      if (ax1 === ax2) continue; // same axis = no cross connector
+
+      const x1 = ax1._xPx, y1 = dateY(eventDate(a));
+      const x2 = ax2._xPx, y2 = dateY(eventDate(b));
+
+      // Shared entity color = first axis color
+      const color = ax1.color;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      const cx = (x1+x2)/2;
+      path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      path.setAttribute('stroke', color);
+      path.classList.add('connector-line');
+      path.setAttribute('data-evids', `${evIds[i]}|${evIds[i+1]}`);
+      path.setAttribute('data-refid', refId);
+      svg.appendChild(path);
+    }
+  }
+}
+
+function setConnectorsVisible(v) {
+  document.querySelectorAll('.connector-line').forEach(l => {
+    l.classList.toggle('visible', v);
+  });
+}
+
+function highlightConnectors(evId) {
+  if (!SHOW_CONNECTORS) return;
+  document.querySelectorAll('.connector-line').forEach(l => {
+    const ids = (l.getAttribute('data-evids')||'').split('|');
+    l.style.opacity = ids.includes(evId) ? '0.85' : '0.08';
+  });
+}
+
+function clearConnectorHighlights() {
+  if (!SHOW_CONNECTORS) return;
+  document.querySelectorAll('.connector-line').forEach(l => {
+    l.style.opacity = '';
+    l.classList.add('visible');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HEADER AXIS PILLS
+═══════════════════════════════════════════════════════════ */
+function buildHeaderAxes() {
+  const container = document.getElementById('hd-axes');
+  container.innerHTML = '';
+  for (const ax of Object.values(AXIS_MAP)) {
+    const pill = document.createElement('div');
+    pill.className = 'hd-axis-pill';
+    pill.id = `pill-${ax.id}`;
+    pill.innerHTML = `
+      <div class="hd-axis-pip" style="background:${ax.color}"></div>
+      <div>
+        <div class="hd-axis-label">${ax.label}</div>
+        ${ax.sublabel ? `<div class="hd-axis-sub">${ax.sublabel}</div>` : ''}
+      </div>
+    `;
+    pill.addEventListener('click', () => toggleAxis(ax.id));
+    container.appendChild(pill);
+  }
+}
+
+function toggleAxis(axId) {
+  if (MUTED_AXES.has(axId)) MUTED_AXES.delete(axId);
+  else MUTED_AXES.add(axId);
+
+  document.getElementById(`pill-${axId}`)?.classList.toggle('muted', MUTED_AXES.has(axId));
+
+  document.querySelectorAll('.ev-anchor').forEach(el => {
+    const evAxis = el.getAttribute('data-axis');
+    el.classList.toggle('axis-hidden', MUTED_AXES.has(evAxis));
+  });
+
+  document.querySelectorAll('.axis-rail').forEach(el => {
+    const id = el.id.replace('rail-','');
+    el.style.opacity = MUTED_AXES.has(id) ? '0.1' : '1';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOOLTIP
+═══════════════════════════════════════════════════════════ */
+const tooltip = document.getElementById('tooltip');
+function showTooltip(e, ev) {
+  const ax = AXIS_MAP[ev._resolvedAxis];
+  const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'), p1(ev,'amountCurrency')||p1(ev,'currency'));
+  tooltip.innerHTML = `
+    <strong>${esc(eventName(ev))}</strong>
+    <span style="color:${ax?.color||'#999'};font-family:var(--font-mono);font-size:9px;letter-spacing:0.06em">${formatDate(eventDate(ev))}</span>
+    ${amount ? `<br><span style="font-family:var(--font-mono);font-size:11px;font-weight:600">${esc(amount)}</span>` : ''}
+  `;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top  = (e.clientY - 10) + 'px';
+}
+function hideTooltip() { tooltip.classList.remove('visible'); }
+document.addEventListener('mousemove', e => {
+  if (tooltip.classList.contains('visible')) moveTooltip(e);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════ */
+function openModal(ev) {
+  const ax = AXIS_MAP[ev._resolvedAxis];
+  const backdrop = document.getElementById('modal-backdrop');
+
+  document.getElementById('modal-axis-tag').textContent = ax?.label || ev._resolvedAxis;
+  document.getElementById('modal-axis-tag').style.background = ax?.color || '#666';
+  document.getElementById('modal-schema-tag').textContent = ev.schema;
+  document.getElementById('modal-title').textContent = eventName(ev);
+
+  const dateStr = eventDate(ev);
+  const endStr  = eventEndDate(ev);
+  document.getElementById('modal-date').textContent =
+    endStr ? `${formatDate(dateStr)} – ${formatDate(endStr)}` : formatDate(dateStr);
+
+  const body = document.getElementById('modal-body');
+  body.innerHTML = '';
+
+  // Description
+  const desc = eventDesc(ev);
+  if (desc) {
+    const sec = section('Description');
+    const p = document.createElement('p');
+    p.className = 'modal-description';
+    p.textContent = desc;
+    sec.appendChild(p);
+    body.appendChild(sec);
+  }
+
+  // Amount
+  const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'), p1(ev,'amountCurrency')||p1(ev,'currency'));
+  if (amount) {
+    const sec = section('Montant');
+    const el = document.createElement('div');
+    el.className = 'modal-amount';
+    el.style.color = ax?.color || 'inherit';
+    el.textContent = amount;
+    sec.appendChild(el);
+    body.appendChild(sec);
+  }
+
+  // Properties grid (show interesting props)
+  const skipProps = new Set(['name','fileName','description','date','startDate','endDate','dissolutionDate','incorporationDate','amount','amountCurrency','currency','axis','eventLabel','ftmRef','alert','sourceUrl']);
+  const propsToShow = Object.entries(ev.properties || {})
+    .filter(([k]) => !skipProps.has(k) && ev.properties[k].length);
+  if (propsToShow.length) {
+    const sec = section('Propriétés');
+    const grid = document.createElement('div');
+    grid.className = 'modal-prop-grid';
+    for (const [k, vals] of propsToShow) {
+      const prop = document.createElement('div');
+      prop.className = 'modal-prop';
+      prop.innerHTML = `<div class="modal-prop-key">${esc(k)}</div><div class="modal-prop-val">${esc(vals.join(' · '))}</div>`;
+      grid.appendChild(prop);
+    }
+    sec.appendChild(grid);
+    body.appendChild(sec);
+  }
+
+  // FtM references
+  const refs = pAll(ev,'ftmRef');
+  if (refs.length) {
+    const sec = section('Entités liées');
+    const refsCont = document.createElement('div');
+    refsCont.className = 'modal-refs';
+    for (const refId of refs) {
+      const refEnt = ENTITIES[refId];
+      if (!refEnt) {
+        const el = document.createElement('div');
+        el.className = 'modal-ref-card';
+        el.innerHTML = `<span class="modal-ref-schema" style="background:#888">${esc(refId.split('-')[0])}</span><span class="modal-ref-name" style="color:var(--dust)">${esc(refId)}</span>`;
+        refsCont.appendChild(el);
+        continue;
+      }
+      const refAx = AXIS_MAP[entityAxis(refEnt)];
+      const schemaColor = refAx?.color || '#888';
+      const el = document.createElement('div');
+      el.className = 'modal-ref-card';
+      el.style.cursor = 'pointer';
+      el.innerHTML = `
+        <span class="modal-ref-schema" style="background:${schemaColor}">${esc(refEnt.schema)}</span>
+        <span class="modal-ref-name">${esc(p1(refEnt,'name')||p1(refEnt,'fileName')||refId)}</span>
+      `;
+      if (pAll(refEnt,'name').length > 1) {
+        el.title = 'Également : ' + pAll(refEnt,'name').slice(1).join(' · ');
+      }
+      el.addEventListener('click', () => {
+        // If it's an event entity, navigate to it; else show its modal
+        const asEvent = EVENTS.find(e => e.id === refId);
+        if (asEvent) openModal(asEvent);
+      });
+      refsCont.appendChild(el);
+    }
+    sec.appendChild(refsCont);
+    body.appendChild(sec);
+  }
+
+  // Source URL
+  const srcUrls = pAll(ev,'sourceUrl');
+  if (srcUrls.length) {
+    const sec = section('Source primaire');
+    for (const url of srcUrls) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'modal-source-link';
+      let label = url;
+      try { label = new URL(url).hostname; } catch {}
+      a.innerHTML = `
+        <span class="modal-source-icon">↗</span>
+        <span class="modal-source-text">
+          <span class="modal-source-label">${esc(label)}</span>
+          <span class="modal-source-url">${esc(url)}</span>
+        </span>
+      `;
+      sec.appendChild(a);
+    }
+    body.appendChild(sec);
+  }
+
+  backdrop.classList.add('open');
+}
+
+function section(label) {
+  const wrap = document.createElement('div');
+  const lbl = document.createElement('div');
+  lbl.className = 'modal-section-label';
+  lbl.textContent = label;
+  wrap.appendChild(lbl);
+  return wrap;
+}
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-backdrop').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-backdrop')) closeModal();
+});
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ═══════════════════════════════════════════════════════════
+   CONNECTOR TOGGLE
+═══════════════════════════════════════════════════════════ */
+document.getElementById('inf-connect-toggle').addEventListener('click', function() {
+  SHOW_CONNECTORS = !SHOW_CONNECTORS;
+  this.textContent = `Connexions : ${SHOW_CONNECTORS?'ON':'OFF'}`;
+  this.classList.toggle('active', SHOW_CONNECTORS);
+  setConnectorsVisible(SHOW_CONNECTORS);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   ESCAPE
+═══════════════════════════════════════════════════════════ */
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHA-256 (Web Crypto API — natif, sans dépendance)
+═══════════════════════════════════════════════════════════ */
+async function sha256hex(text) {
+  const buf = await crypto.subtle.digest(
+    'SHA-256', new TextEncoder().encode(text)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INTEGRITY REPORT
+═══════════════════════════════════════════════════════════ */
+const FILE_REPORTS = [];  // { name, version, status, hash, size }
+
+const INT_OK      = '✓';
+const INT_NEW     = '↑';
+const INT_ALTERED = '✗';
+const INT_UNKNOWN = '?';
+const INT_MISSING = '—';
+
+function integrityColor(s) {
+  if (s === INT_OK)      return '#27ae60';
+  if (s === INT_NEW)     return '#f39c12';
+  if (s === INT_ALTERED) return '#e74c3c';
+  return '#6b6762';
+}
+
+function buildIntegrityPanel() {
+  const rows = document.getElementById('integrity-rows');
+  rows.innerHTML = '';
+
+  const allOk = FILE_REPORTS.every(r => r.status === INT_OK || r.status === INT_UNKNOWN);
+  const hasAltered = FILE_REPORTS.some(r => r.status === INT_ALTERED);
+
+  const summary = document.getElementById('inf-integrity');
+  if (hasAltered) {
+    summary.textContent = 'Intégrité : ✗ ALTÉRATION';
+    summary.style.color = '#e74c3c';
+  } else if (FILE_REPORTS.some(r => r.status === INT_NEW)) {
+    summary.textContent = 'Intégrité : ↑ nouvelles versions';
+    summary.style.color = '#f39c12';
+  } else if (allOk) {
+    summary.textContent = 'Intégrité : ✓ conforme';
+    summary.style.color = '#27ae60';
+  } else {
+    summary.textContent = 'Intégrité : ? non vérifié';
+    summary.style.color = '#6b6762';
+  }
+
+  for (const r of FILE_REPORTS) {
+    const row = document.createElement('div');
+    row.style.cssText = `
+      display:grid; grid-template-columns:1fr 40px 18px 80px;
+      gap:8px; align-items:center; padding:4px 0;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+    `;
+    const vLabel = r.version > 0 ? `v${r.version}` : 'base';
+    const sizeKb = r.size ? `${(r.size/1024).toFixed(1)} Ko` : '—';
+    row.innerHTML = `
+      <span style="color:#c8c4be;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.hash)}">${esc(r.name)}</span>
+      <span style="color:#6b6762;text-align:right">${esc(vLabel)}</span>
+      <span style="color:${integrityColor(r.status)};text-align:center;font-weight:600">${r.status}</span>
+      <span style="color:#6b6762;text-align:right">${esc(sizeKb)}</span>
+    `;
+    rows.appendChild(row);
+  }
+
+  // Légende
+  const legend = document.createElement('div');
+  legend.style.cssText = 'margin-top:10px;color:#4a4a5a;line-height:1.8;';
+  legend.innerHTML = `✓ conforme &nbsp;↑ nouvelle version &nbsp;✗ altéré &nbsp;? non vérifié dans manifest`;
+  rows.appendChild(legend);
+}
+
+/* toggle panel */
+document.getElementById('inf-integrity').addEventListener('click', () => {
+  const panel = document.getElementById('integrity-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('integrity-close').addEventListener('click', () => {
+  document.getElementById('integrity-panel').style.display = 'none';
+});
+
+/* ═══════════════════════════════════════════════════════════
+   STATS BAR
+═══════════════════════════════════════════════════════════ */
+function updateInfoBar(fileCount, deployTs) {
+  const evCount  = EVENTS.length;
+  const entCount = Object.keys(ENTITIES).length;
+  document.getElementById('inf-event-count').textContent  = `${evCount} événements`;
+  document.getElementById('inf-entity-count').textContent = `${entCount} entités FtM`;
+  document.getElementById('inf-file-count').textContent   = `${fileCount} fichiers`;
+  if (deployTs) {
+    const d = new Date(deployTs);
+    const label = isNaN(d) ? deployTs : d.toLocaleDateString('fr-FR', {
+      day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+    });
+    document.getElementById('inf-deploy-ts').textContent = `Déployé : ${label}`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOADER UI
+═══════════════════════════════════════════════════════════ */
+function loaderFile(path, state) {
+  // state: 'loading' | 'ok' | 'warn' | 'error'
+  const container = document.getElementById('loader-files');
+  const id = 'lf-' + path.replace(/[^a-z0-9]/gi,'_');
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'loader-file';
+    el.id = id;
+    const name = path.split('/').pop();
+    el.innerHTML = `<span class="lf-icon">○</span><span>${name}</span>`;
+    container.appendChild(el);
+  }
+  if (state === 'ok')    { el.classList.add('done');  el.querySelector('.lf-icon').textContent = '✓'; }
+  if (state === 'warn')  { el.querySelector('.lf-icon').textContent = '⚠'; el.querySelector('.lf-icon').style.color='#f39c12'; }
+  if (state === 'error') { el.querySelector('.lf-icon').textContent = '✗'; el.querySelector('.lf-icon').style.color='#e74c3c'; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN LOAD & RENDER
+═══════════════════════════════════════════════════════════ */
+async function main() {
+  const loader = document.getElementById('loader');
+
+  // 0. Détecter le protocole file:// — fetch() bloqué par le navigateur
+  if (location.protocol === 'file:') {
+    loader.querySelector('.loader-text').innerHTML =
+      'Ouverture directe non supportée&nbsp;(protocole <code>file://</code>)<br>' +
+      '<span style="font-size:11px;opacity:0.7;font-family:var(--font-mono)">' +
+      'Lancez&nbsp;<strong>python deploy.py --local</strong>&nbsp;puis ouvrez&nbsp;' +
+      '<strong>http://localhost:8080</strong></span>';
+    loader.querySelector('.loader-text').style.color = '#f39c12';
+    return;
+  }
+
+  // 1. Charger le manifest (avec détection de version Windows)
+  let manifest;
+  const manifestCandidates = ['manifest.json'];
+  for (let n = 1; n <= 9; n++) manifestCandidates.push(`manifest (${n}).json`);
+
+  let manifestText = null, manifestPath = null;
+  for (const candidate of manifestCandidates.reverse()) { // du plus élevé au plus bas
+    try {
+      const r = await fetch(candidate);
+      if (r.ok) { manifestText = await r.text(); manifestPath = candidate; break; }
+    } catch {}
+  }
+  if (!manifestText) {
+    loader.querySelector('.loader-text').textContent = 'Erreur : manifest.json introuvable';
+    loader.querySelector('.loader-text').style.color = '#e74c3c';
+    return;
+  }
+  try { manifest = JSON.parse(manifestText); }
+  catch(e) {
+    loader.querySelector('.loader-text').textContent = `Erreur manifest JSON : ${e.message}`;
+    loader.querySelector('.loader-text').style.color = '#e74c3c';
+    return;
+  }
+  const manifestVersion = parseInt((manifestPath.match(/\((\d+)\)/) || ['','0'])[1]) || 0;
+  const manifestHash = await sha256hex(manifestText);
+  FILE_REPORTS.push({
+    name: 'manifest.json',
+    version: manifestVersion,
+    status: INT_UNKNOWN,  // le manifest lui-même ne peut pas se vérifier
+    hash: manifestHash,
+    size: manifestText.length,
+  });
+
+  MANIFEST = manifest;
+  for (const ax of (manifest.axes||[])) AXIS_MAP[ax.id] = ax;
+
+  document.getElementById('hd-title-el').textContent = manifest.title || '';
+  document.getElementById('hd-sub-el').textContent   = manifest.subtitle || '';
+
+  // 2. Charger tous les JSONL avec détection de version et vérification hash
+  const files = manifest.files || [];
+
+  const fetches = files.map(async (f) => {
+    const base = f.path; // ex: "data/reseau_goldberg.ftm.jsonl"
+    const parts = base.match(/^(.*\/)([^/]+)(\.[^.]+)$/) ||
+                  base.match(/^()([^/]+)(\.[^.]+)$/);
+    const dir    = parts ? parts[1] : '';
+    const stem   = parts ? parts[2] : base;
+    const ext    = parts ? parts[3] : '';
+
+    // Construire la liste des candidats par ordre croissant de version
+    const candidates = [`${dir}${stem}${ext}`];
+    for (let n = 1; n <= 9; n++) candidates.push(`${dir}${stem} (${n})${ext}`);
+
+    loaderFile(base, 'loading');
+
+    let bestText = null, bestVersion = 0, bestSize = 0;
+
+    // On tente tous les candidats et garde le numéro le plus élevé qui répond
+    await Promise.all(candidates.map(async (candidate, idx) => {
+      try {
+        const r = await fetch(candidate);
+        if (!r.ok) return;
+        const text = await r.text();
+        if (idx >= bestVersion || (idx === 0 && bestVersion === 0)) {
+          bestText    = text;
+          bestVersion = idx;
+          bestSize    = text.length;
+        }
+      } catch {}
+    }));
+
+    if (!bestText) {
+      loaderFile(base, 'warn');
+      FILE_REPORTS.push({ name: base.split('/').pop(), version: 0,
+        status: INT_MISSING, hash: '', size: 0 });
+      console.warn(`Fichier non trouvé : ${base}`);
+      return;
+    }
+
+    // Vérification d'intégrité
+    const hash = await sha256hex(bestText);
+    const expected = f.sha256;
+    let status;
+    if (!expected)           status = INT_UNKNOWN;
+    else if (hash === expected) status = INT_OK;
+    else                     status = INT_NEW;
+
+    // Ingestion
+    for (const line of bestText.split('\n')) ingestLine(line, f.axis);
+
+    FILE_REPORTS.push({
+      name: base.split('/').pop(),
+      version: bestVersion,
+      status,
+      hash,
+      size: bestSize,
+    });
+
+    const loaderState = status === INT_ALTERED ? 'error' :
+                        status === INT_NEW      ? 'warn'  : 'ok';
+    loaderFile(base, loaderState);
+  });
+
+  await Promise.all(fetches);
+
+  // 3. Structures dérivées
+  computeAxisPositions();
+  buildEvents();
+
+  // 4. Rendu
+  const canvas = document.getElementById('canvas');
+  canvas.style.width  = CANVAS_WIDTH  + 'px';
+  canvas.style.height = CANVAS_HEIGHT + 'px';
+  canvas.style.position = 'relative';
+
+  buildYearSpine();
+  buildAxisRails(canvas);
+  buildHeaderAxes();
+  buildEvents_DOM(canvas);
+
+  // 5. Connecteurs SVG
+  const svg = document.getElementById('connector-svg');
+  svg.style.width  = CANVAS_WIDTH  + 'px';
+  svg.style.height = CANVAS_HEIGHT + 'px';
+  buildConnectors(svg);
+
+  // 6. Barre d'état
+  updateInfoBar(files.length, manifest._last_deploy);
+  buildIntegrityPanel();
+
+  // 7. Masquer le loader
+  setTimeout(() => { loader.classList.add('done'); }, 400);
+}
+
+// Handle resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    computeAxisPositions();
+    const canvas = document.getElementById('canvas');
+    canvas.innerHTML = '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
+    canvas.style.width = CANVAS_WIDTH + 'px';
+    buildAxisRails(canvas);
+    buildEvents_DOM(canvas);
+    const svg = document.getElementById('connector-svg');
+    svg.style.width  = CANVAS_WIDTH + 'px';
+    svg.style.height = CANVAS_HEIGHT + 'px';
+    buildConnectors(svg);
+  }, 200);
+});
+
+main().catch(console.error);
+</script>
 </body>
 </html>

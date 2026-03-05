@@ -88,46 +88,46 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "6b67d309ec11ea1701ff1a281acc63905a2ac28c36c5bfa697a31f1ba8937a78",
-      "version": 0,
-      "size": 14853,
-      "deployed": "2026-03-05T15:06:39Z"
+      "sha256": "1ca44dc417a7281ac60564bec041bcc76f6340c6cae2d5786e07c3ba41a72195",
+      "version": 2,
+      "size": 59123,
+      "deployed": "2026-03-05T17:51:51Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "8e6927e88873117f4b6ba4c13f8bbbd04ba6798615ff4e1ff0ab3a3bcc0310f2",
-      "version": 0,
-      "size": 13158,
-      "deployed": "2026-03-05T14:52:56Z"
+      "sha256": "102182c9550e58219b3deaa8c68f79e1914eaf3a4c784a488753aa661033c23d",
+      "version": 1,
+      "size": 27016,
+      "deployed": "2026-03-05T17:51:51Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
       "label": "Réseau Zimmermann — Monaco · Sygnum",
-      "sha256": "bf85dfe84712068cb16ba152c33641b3910503f2d0963c9bc3952975dde0cfa7",
-      "version": 0,
-      "size": 10465,
-      "deployed": "2026-03-05T14:52:56Z"
+      "sha256": "3e544157bd4f878895f31dc13815810918552a2af1875a802264fe8c8d083cad",
+      "version": 2,
+      "size": 15565,
+      "deployed": "2026-03-05T17:51:51Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "35dc98994e44809d53d936a56a2d5443a19c063351529f04e9c50c4edcad877b",
-      "version": 0,
-      "size": 4818,
-      "deployed": "2026-03-05T15:06:39Z"
+      "sha256": "559d10d4efd47c42d11cb9862f57ec1526c86f4ad1ebf8228fd3dfe82dd010af",
+      "version": 1,
+      "size": 17910,
+      "deployed": "2026-03-05T17:51:51Z"
     },
     {
       "path": "data/shams_indonesie.ftm.jsonl",
       "axis": "dubai",
       "label": "Shams Equity / Dubaï–Indonésie",
-      "sha256": "1c51532c7624cbf157fe5240e7416a9348148cd69dfc25a5f5c7746630fc3372",
-      "version": 0,
-      "size": 6782,
-      "deployed": "2026-03-05T14:52:56Z"
+      "sha256": "c2b711fbd11626609635013e8b1a0c88f6ff9f1e1ce148d3fff6efff74052e3c",
+      "version": 1,
+      "size": 10783,
+      "deployed": "2026-03-05T17:51:51Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
@@ -142,11 +142,11 @@
       "path": "data/presse.ftm.jsonl",
       "axis": null,
       "label": "Révélations & presse (axe dynamique)",
-      "sha256": "16b6581004935cf3c87e85b6feb7ecb1176a01aa4eacb60b9a1ab28cf9b3cb1b",
-      "version": 0,
-      "size": 2404,
-      "deployed": "2026-03-05T14:52:56Z"
+      "sha256": "ad0de17f5480e5e724387be97d441003e898cf4a0d949dc8404b2b9257b87904",
+      "version": 1,
+      "size": 7293,
+      "deployed": "2026-03-05T17:51:51Z"
     }
   ],
-  "_last_deploy": "2026-03-05T15:06:39Z"
+  "_last_deploy": "2026-03-05T17:58:49Z"
 }
