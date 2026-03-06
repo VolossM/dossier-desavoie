@@ -208,6 +208,8 @@ body::before {
   position: relative;
   display: flex;
   width: 100%;
+  height: calc(100vh - 56px - 10px - 28px); /* header + scroll-track + info-bar */
+  overflow: hidden;
 }
 
 /* ── Year spine ── */
@@ -250,7 +252,8 @@ body::before {
   flex: 1;
   position: relative;
   overflow-x: auto;
-  min-height: 100vh;
+  overflow-y: auto;
+  height: 100%;         /* occupe toute la hauteur de #stage */
   touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
@@ -1484,6 +1487,19 @@ function buildYearSpine() {
 /* ═══════════════════════════════════════════════════════════
    AXIS RAILS
 ═══════════════════════════════════════════════════════════ */
+// Positionner le tooltip près du curseur (appelé par les bandes de sociétés)
+function _moveBandTooltip(e) {
+  const TW = tooltip.offsetWidth  || 180;
+  const TH = tooltip.offsetHeight || 60;
+  let x = e.clientX + 14;
+  let y = e.clientY - TH / 2;
+  if (x + TW > window.innerWidth  - 8) x = e.clientX - TW - 10;
+  if (y < 4)                           y = 4;
+  if (y + TH > window.innerHeight - 4) y = window.innerHeight - TH - 4;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top  = y + 'px';
+}
+
 function buildAxisRails(canvas) {
   // Passe 2 : résolution des coordonnées Y (SCALE_D est maintenant calibré)
   resolveLayoutY();
@@ -1562,6 +1578,33 @@ function buildAxisRails(canvas) {
       line.title = `${p1(dir,'role') || 'Mandat'} — ${personId}`;
       band.appendChild(line);
     }
+
+    // Tooltip au survol de la bande
+    band.addEventListener('mouseenter', (e) => {
+      const name_   = p1(co, 'name')         || coId;
+      const form    = p1(co, 'legalForm')     || '';
+      const jur     = p1(co, 'jurisdiction')  || p1(co, 'country') || '';
+      const inc     = p1(co, 'incorporationDate') || '';
+      const dis     = p1(co, 'dissolutionDate')   || '';
+      const st      = p1(co, 'status')        || '';
+      const STATUS_LABEL = {
+        active:'active', dormant:'dormante', dissolved:'dissoute',
+        insolvent:'insolvable', liquidation:'liquidation judiciaire',
+        terminated:'radiée', rj:'redressement judiciaire', default:''
+      };
+      const stLabel = STATUS_LABEL[st] || st;
+      let lines = [`<strong>${esc(name_)}</strong>`];
+      if (form)  lines.push(`<span style="opacity:0.75">${esc(form)}</span>`);
+      const meta = [jur, stLabel ? `<em>${esc(stLabel)}</em>` : ''].filter(Boolean).join(' · ');
+      if (meta) lines.push(meta);
+      if (inc) lines.push(`Imm. ${formatDate(inc)}${dis ? ' → ' + formatDate(dis) : ''}`);
+      tooltip.innerHTML = lines.join('<br>');
+      tooltip.style.borderLeft = `3px solid ${ax.color}`;
+      tooltip.style.display = 'block';
+      _moveBandTooltip(e);
+    });
+    band.addEventListener('mousemove', _moveBandTooltip);
+    band.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
 
     canvas.appendChild(band);
   }
