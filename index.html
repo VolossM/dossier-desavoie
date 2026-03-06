@@ -2891,6 +2891,16 @@ function syncScrollTrackWidth() {
 }
 
 let _scrollSyncing = false;
+
+// ── Sync vertical : le year-spine est un frère de #canvas dans le flex #stage.
+// #stage { overflow: hidden } le tronque à la hauteur de la fenêtre.
+// translateY(-scrollTop) fait glisser la colonne des années dans la fenêtre,
+// de sorte que les millésimes visibles correspondent toujours au contenu affiché.
+const yearSpineEl = document.getElementById('year-spine');
+function syncYearSpine() {
+  if (yearSpineEl) yearSpineEl.style.transform = `translateY(-${canvasEl.scrollTop}px)`;
+}
+
 scrollTrack.addEventListener('scroll', () => {
   if (_scrollSyncing) return;
   _scrollSyncing = true;
@@ -2898,6 +2908,9 @@ scrollTrack.addEventListener('scroll', () => {
   _scrollSyncing = false;
 });
 canvasEl.addEventListener('scroll', () => {
+  // Sync vertical (hors garde : pas de risque de boucle)
+  syncYearSpine();
+  // Sync horizontal miroir
   if (_scrollSyncing) return;
   _scrollSyncing = true;
   scrollTrack.scrollLeft = canvasEl.scrollLeft;
