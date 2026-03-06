@@ -83,7 +83,7 @@
       "sha256": "1ca44dc417a7281ac60564bec041bcc76f6340c6cae2d5786e07c3ba41a72195",
       "version": 4,
       "size": 59123,
-      "deployed": "2026-03-06T09:54:38Z"
+      "deployed": "2026-03-06T10:10:44Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
@@ -92,7 +92,7 @@
       "sha256": "915b885d1ad4f40e5394c818ccba806aab5e912813eef45ad3c4705c2ed1d2a4",
       "version": 3,
       "size": 36248,
-      "deployed": "2026-03-06T09:54:38Z"
+      "deployed": "2026-03-06T10:10:44Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
@@ -101,7 +101,7 @@
       "sha256": "559d10d4efd47c42d11cb9862f57ec1526c86f4ad1ebf8228fd3dfe82dd010af",
       "version": 3,
       "size": 17910,
-      "deployed": "2026-03-06T09:54:38Z"
+      "deployed": "2026-03-06T10:10:44Z"
     },
     {
       "path": "data/shams_indonesie.ftm.jsonl",
@@ -110,7 +110,7 @@
       "sha256": "c2b711fbd11626609635013e8b1a0c88f6ff9f1e1ce148d3fff6efff74052e3c",
       "version": 3,
       "size": 10783,
-      "deployed": "2026-03-06T09:54:38Z"
+      "deployed": "2026-03-06T10:10:44Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
@@ -119,7 +119,7 @@
       "sha256": "bb9e89b185f2f9dde42d99d179389f49e19b049439c148a83a000b0bd8367e20",
       "version": 2,
       "size": 6184,
-      "deployed": "2026-03-06T09:54:38Z"
+      "deployed": "2026-03-06T10:10:44Z"
     },
     {
       "path": "data/presse.ftm.jsonl",
@@ -128,8 +128,16 @@
       "sha256": "ad0de17f5480e5e724387be97d441003e898cf4a0d949dc8404b2b9257b87904",
       "version": 3,
       "size": 7293,
-      "deployed": "2026-03-06T09:54:38Z"
+      "deployed": "2026-03-06T10:10:44Z"
+    },
+    {
+      "path": "data/zimmermann.ftm.jsonl",
+      "axis": "zimmermann",
+      "sha256": "3e544157bd4f878895f31dc13815810918552a2af1875a802264fe8c8d083cad",
+      "version": 5,
+      "size": 15565,
+      "deployed": "2026-03-06T10:10:44Z"
     }
   ],
-  "_last_deploy": "2026-03-06T10:06:25Z"
+  "_last_deploy": "2026-03-06T10:10:44Z"
 }
