@@ -289,6 +289,10 @@ body::before {
 .co-band:hover {
   box-shadow: 0 2px 8px rgba(0,0,0,0.16);
 }
+.co-band.no-start-date {
+  border-top-style: dashed;   /* date d'incorporation inconnue ou hors frise */
+  opacity: 0.82;
+}
 .co-band:hover { z-index: 20; }
 
 .co-band-label {
@@ -1103,7 +1107,7 @@ const BUILD_ID = '2026-03-06 10:02';  // horodatage injecté à la génération
    CONSTANTS
 ═══════════════════════════════════════════════════════════ */
 // PX_PER_DAY supprimé — échelle exponentielle dynamique
-const EPOCH_START    = new Date('2005-01-01');
+let EPOCH_START    = new Date('1929-01-01');  // recalibré dynamiquement dans buildYearSpine
 const CANVAS_PAD_TOP    = 48;
 const CANVAS_PAD_BOTTOM = 80;
 const CANVAS_MIN_WIDTH  = 900;
@@ -1204,7 +1208,7 @@ function dateY(dateStr) {
   if (!d) return CANVAS_PAD_TOP;
   const t = daysSinceEpoch(d);
   const usable = CANVAS_FIXED_H - CANVAS_PAD_TOP - CANVAS_PAD_BOTTOM;
-  return Math.round(CANVAS_PAD_TOP + expScale(Math.max(0, t)) * usable);
+  return Math.round(CANVAS_PAD_TOP + expScale(t) * usable);
 }
 
 function formatDate(s) {
@@ -1376,11 +1380,43 @@ function computeLayout() {
 
 // Passe 2 : calcul des coordonnées verticales (après buildYearSpine → SCALE_D OK)
 function resolveLayoutY() {
-  // Date du premier événement pour les sociétés sans date d'incorporation
-  const firstEventDate = EVENTS.length ? eventDate(EVENTS[0]) : '2005-01-01';
+  // ── Index : coId → date ISO du premier événement qui référence cette société ──
+  // Utilisé comme fallback pour les sociétés sans incorporationDate.
+  const firstRefDate = {};  // coId → ISO string
+  for (const ev of EVENTS) {
+    const d = eventDate(ev);
+    if (!d) continue;
+    const refs = pAll(ev, 'ftmRef').concat(pAll(ev, 'organization'));
+    for (const ref of refs) {
+      if (!firstRefDate[ref] || d < firstRefDate[ref]) firstRefDate[ref] = d;
+    }
+  }
+
   for (const [coId, layout] of Object.entries(_companyLayout)) {
-    layout.yStart = dateY(layout.incStr || firstEventDate || '2005-01-01');
-    layout.yEnd   = layout.disStr ? dateY(layout.disStr) : CANVAS_HEIGHT;
+    const inc = layout.incStr;
+
+    // Deux cas pour yStart :
+    // A) Date connue (quelle que soit l'ancienneté) → position exacte sur l'échelle exp.
+    // B) Pas de date → fallback sur premier événement référençant ; sinon sommet, marqué.
+    let yStart;
+    let noStartDate = false;
+
+    if (inc) {
+      yStart = dateY(inc);
+    } else {
+      const fallback = firstRefDate[coId];
+      if (fallback) {
+        yStart = dateY(fallback);
+      } else {
+        yStart = CANVAS_PAD_TOP;
+      }
+      noStartDate = true;
+    }
+
+    layout.yStart      = yStart;
+    layout.noStartDate = noStartDate;
+    layout.yEnd        = layout.disStr ? dateY(layout.disStr) : CANVAS_HEIGHT;
+
     // Hauteur minimale de 60px pour que la bande soit toujours visible
     if (layout.yEnd - layout.yStart < 60) layout.yEnd = layout.yStart + 60;
   }
@@ -1455,19 +1491,50 @@ function buildYearSpine() {
 
   const firstDate = parseDate(eventDate(EVENTS[0]));
   const lastDate  = parseDate(eventDate(EVENTS[EVENTS.length-1]));
-  const firstYear = firstDate.getFullYear();
   const lastYear  = lastDate.getFullYear() + 1;
 
-  // SCALE_D et CANVAS_HEIGHT doivent être calibrés AVANT tout appel à dateY()
+  // Remonter jusqu'à la date d'incorporation la plus ancienne
+  // (les sociétés peuvent précéder le premier événement de plusieurs décennies)
+  let firstYear = firstDate.getFullYear();
+  for (const ent of Object.values(ENTITIES)) {
+    if (ent.schema !== 'Company') continue;
+    const inc = p1(ent, 'incorporationDate');
+    if (!inc) continue;
+    const y = parseInt(inc.slice(0, 4));
+    if (!isNaN(y) && y < firstYear) firstYear = y;
+  }
+
+  // ── EPOCH_START dynamique : un an avant la date la plus ancienne connue ──
+  // Sources : incorporationDate de toutes les sociétés + date du premier événement.
+  {
+    let minYear = firstDate.getFullYear();
+    for (const ent of Object.values(ENTITIES)) {
+      if (ent.schema !== 'Company') continue;
+      const inc = p1(ent, 'incorporationDate');
+      if (!inc) continue;
+      const y = parseInt(inc.slice(0, 4));
+      if (!isNaN(y) && y < minYear) minYear = y;
+    }
+    EPOCH_START = new Date(`${minYear - 1}-01-01`);
+  }
+
+  // SCALE_D calibré sur la distance epoch → dernier événement
   SCALE_D       = Math.max(1, daysSinceEpoch(lastDate));
   CANVAS_HEIGHT = CANVAS_FIXED_H;
 
   spine.innerHTML = '';
 
+  // Pas adaptatif : seuil minimal en px pour qu'un label vertical soit lisible
+  const MIN_LABEL_H = 14;
+  const STEPS = [1, 2, 5, 10, 25, 50, 100];
+
+  // Snap au multiple rond supérieur dans STEPS
+  function snapStep(rawStep) {
+    return STEPS.find(s => s >= rawStep) ?? STEPS[STEPS.length - 1];
+  }
+
   for (let y = firstYear; y <= lastYear; y++) {
-    const yDate  = new Date(y, 0, 1);
-    const yY     = dateY(yDate.toISOString().slice(0,10));
-    // Pour le dernier bloc : plafonner à CANVAS_FIXED_H pour éviter le dépassement
+    const yY     = dateY(`${y}-01-01`);
     const yNext  = Math.min(CANVAS_FIXED_H, dateY(`${y+1}-01-01`));
     const height = Math.max(0, yNext - yY);
 
@@ -1476,10 +1543,15 @@ function buildYearSpine() {
     block.style.height = height + 'px';
     block.setAttribute('data-year', y);
 
-    const label = document.createElement('div');
-    label.className = 'yr-label';
-    label.textContent = y;
-    block.appendChild(label);
+    // Afficher le label uniquement si l'année tombe sur un multiple du pas local.
+    // Le pas local est le plus petit multiple rond tel que height * step >= MIN_LABEL_H.
+    const step  = snapStep(height > 0 ? MIN_LABEL_H / height : 100);
+    if (y % step === 0) {
+      const label = document.createElement('div');
+      label.className = 'yr-label';
+      label.textContent = y;
+      block.appendChild(label);
+    }
     spine.appendChild(block);
   }
 }
@@ -1544,6 +1616,7 @@ function buildAxisRails(canvas) {
     band.style.background    = bg;
     band.style.borderColor   = 'rgba(0,0,0,0.15)';
     band.style.borderTopColor = ax.color;
+    if (layout.noStartDate) band.classList.add('no-start-date');
 
     // Étiquette sticky
     const label = document.createElement('div');
