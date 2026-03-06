@@ -270,6 +270,60 @@ body::before {
    AXIS RAILS (continuous horizontal positions)
 ═══════════════════════════════════════════ */
 .axis-rail { display: none; }
+
+/* ── Bandes de sociétés ── */
+.co-band {
+  position: absolute;
+  border-radius: 3px 3px 0 0;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(0,0,0,0.18);
+  border-top-width: 3px;
+  overflow: visible;
+  z-index: 8;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+.co-band:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.16);
+}
+.co-band:hover { z-index: 20; }
+
+.co-band-label {
+  position: sticky;
+  top: 70px;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px 4px 0;
+  opacity: 0.75;
+  cursor: default;
+  user-select: none;
+  z-index: 5;
+}
+
+/* ── Traits de mandats ── */
+.mandate-line {
+  position: absolute;
+  width: 2px;
+  border-radius: 1px;
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ── Zone d'axe narratif (fond) ── */
+.axis-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 0;
+}
 ._axis-rail-hidden {
   position: absolute;
   top: 0;
@@ -299,8 +353,12 @@ body::before {
 ═══════════════════════════════════════════ */
 .ev-anchor {
   position: absolute;
-  transform: translateX(-50%);
+  /* Pas de translateX : l'anchor est ancré à son bord gauche = bord droit de la bande */
   z-index: 10;
+}
+.ev-anchor:hover,
+.ev-anchor.hovered {
+  z-index: 900 !important;
 }
 
 .ev-dot {
@@ -310,8 +368,8 @@ body::before {
   border: 2px solid var(--smoke);
   position: absolute;
   top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  transform: translateX(-50%);  /* centre le dot sur le bord gauche de l'anchor */
   cursor: pointer;
   transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
   z-index: 3;
@@ -331,8 +389,8 @@ body::before {
 /* Segment bar for events with duration */
 .ev-segment {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  transform: translateX(-50%);  /* centré sur le bord gauche de l'anchor */
   width: 3px;
   border-radius: 2px;
   opacity: 0.35;
@@ -408,6 +466,30 @@ body::before {
   margin-top: 5px;
   opacity: 0.7;
 }
+.ev-card-source {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  color: var(--dust2);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.ev-card-source:hover { color: var(--ink); }
+.ev-card-source-icon { flex-shrink: 0; opacity: 0.7; }
+.ev-card-source-extra {
+  font-size: 7px;
+  opacity: 0.55;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
 
 /* alert badge */
 .ev-card.is-alert .ev-card-title::before {
@@ -415,6 +497,42 @@ body::before {
   color: var(--red);
   font-style: normal;
   font-family: var(--font-ui);
+}
+
+/* ── Carte compressée (empilement vertical) ── */
+.ev-card.peeked {
+  height: 40px;           /* titre + date visibles, corps masqué */
+  overflow: hidden;
+  transition: height 0.18s var(--ease-out), box-shadow 0.2s, transform 0.2s var(--ease-out), opacity 0.15s;
+}
+.ev-card.peeked .ev-card-desc,
+.ev-card.peeked .ev-card-amount,
+.ev-card.peeked .ev-card-schema {
+  opacity: 0;
+  pointer-events: none;
+}
+/* Au survol : expansion + premier plan */
+.ev-card.peeked:hover {
+  height: auto;
+  overflow: visible;
+  z-index: 999 !important;
+}
+.ev-card.peeked:hover .ev-card-desc,
+.ev-card.peeked:hover .ev-card-amount,
+.ev-card.peeked:hover .ev-card-schema {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Badge de profondeur d'empilement */
+.ev-card.peeked::after {
+  content: attr(data-stack-depth);
+  position: absolute;
+  bottom: 5px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  color: var(--dust);
+  opacity: 0.6;
 }
 
 /* muted state */
@@ -806,6 +924,53 @@ body::before {
   letter-spacing: 0.06em;
 }
 #info-bar span { white-space: nowrap; }
+
+/* ── Recherche texte ── */
+#inf-search {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 3px;
+  color: #c8c4be;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 7px;
+  width: 130px;
+  outline: none;
+  transition: border-color 0.15s, width 0.2s;
+}
+#inf-search:focus {
+  border-color: rgba(255,255,255,0.25);
+  width: 180px;
+}
+#inf-search::placeholder { color: rgba(200,196,190,0.35); }
+
+/* ── Filtres schéma ── */
+.inf-schema-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(200,196,190,0.55);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  user-select: none;
+}
+.inf-schema-btn.active {
+  color: #c8c4be;
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.20);
+}
+.inf-schema-btn:hover { background: rgba(255,255,255,0.08); }
+#inf-schema-btns { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+@media (max-width: 768px) { #inf-schema-btns { display: none; } #inf-search { display: none; } }
 @media (max-width: 600px) {
   #info-bar { gap: 12px; padding: 0 10px; font-size: 8px; overflow-x: auto; }
   #info-bar .inf-sep { display: none; }
@@ -894,6 +1059,10 @@ body::before {
   <span class="inf-sep">·</span>
   <span id="inf-deploy-ts" style="opacity:0.5">—</span>
   <span class="inf-sep">·</span>
+  <span class="inf-sep">·</span>
+  <input id="inf-search" type="text" placeholder="Rechercher…" autocomplete="off" spellcheck="false">
+  <span class="inf-sep">·</span>
+  <span id="inf-schema-btns"></span>
   <span id="inf-scale-block">
     <span class="inf-sep" style="opacity:0.3">·</span>
     <span id="inf-scale-label">Échelle T&nbsp;=&nbsp;<span id="inf-scale-T">—</span>&nbsp;<span id="inf-scale-opt"></span></span>
@@ -923,6 +1092,11 @@ body::before {
 <script>
 'use strict';
 /* ═══════════════════════════════════════════════════════════
+   BUILD
+═══════════════════════════════════════════════════════════ */
+const BUILD_ID = '2026-03-06 10:02';  // horodatage injecté à la génération
+
+/* ═══════════════════════════════════════════════════════════
    CONSTANTS
 ═══════════════════════════════════════════════════════════ */
 // PX_PER_DAY supprimé — échelle exponentielle dynamique
@@ -931,6 +1105,43 @@ const CANVAS_PAD_TOP    = 48;
 const CANVAS_PAD_BOTTOM = 80;
 const CANVAS_MIN_WIDTH  = 900;
 const CANVAS_FIXED_H    = 6200;  // hauteur fixe : l'échelle s'adapte, pas la hauteur
+
+// ── Mise en page des bandes de sociétés ──
+const BAND_W      = 16;   // largeur d'une lane de société (px)
+const BAND_GAP    =  6;   // espace entre axes (inter-axe)
+const AXIS_GAP    = 30;   // espace supplémentaire entre axes narratifs distincts
+const CARD_OFFSET = 10;   // espace entre bord droit de la bande société et le dot
+const AXIS_LEFT   = 32;   // marge gauche du canvas
+const CARD_EST_H  = 90;   // hauteur estimée d'une carte complète (px, premier passage)
+const PEEK_H      = 40;   // hauteur minimale visible d'une carte compressée
+const PEEK_GAP    = 4;    // écart supplémentaire entre cartes compressées
+
+// Couleur de fond par statut
+const STATUS_BG = {
+  active:    '#e8f0e8',   // vert pâle : société active
+  dormant:   '#e8e8e8',   // gris clair : dormante
+  dissolved: '#deded8',   // gris-beige : dissoute
+  insolvent: '#fff3cc',   // jaune paille : cessation de paiements / insolvable
+  rj:        '#ffd9a8',   // orange pâle : redressement judiciaire
+  lj:        '#f5c0c0',   // rouge pâle : liquidation judiciaire
+  default:   '#efefec',   // gris neutre
+};
+
+// Palette de couleurs pour les dirigeants (jusqu'à 12)
+const PERSON_COLORS = [
+  '#e8c874','#74b8e8','#e87474','#74e8b4','#c874e8',
+  '#e8a474','#74e8e8','#a4e874','#e874c8','#b4b4e8',
+  '#e8e874','#74c8e8',
+];
+let _personColorMap = {};
+let _personColorIdx = 0;
+function personColor(personId) {
+  if (!_personColorMap[personId]) {
+    _personColorMap[personId] = PERSON_COLORS[_personColorIdx % PERSON_COLORS.length];
+    _personColorIdx++;
+  }
+  return _personColorMap[personId];
+}
 
 // ── Paramètre de tension T (en jours) ──────────────────────
 // Fonction : y = PAD_TOP + (H_usable) * (exp(t/T) - 1) / (exp(D/T) - 1)
@@ -1083,14 +1294,96 @@ function axisX(axisId) {
   return ax._xPx;
 }
 
-function computeAxisPositions() {
+// _companyLayout : id → { xPx, wPx, lane, axisId }
+let _companyLayout = {};
+
+// Passe 1 : géométrie horizontale pure (sans dateY, sans SCALE_D)
+// Stocke pour chaque société : lane, axisId, dateStrings
+// Les yStart/yEnd sont calculés dans buildAxisRails (après buildYearSpine).
+function computeLayout() {
   CANVAS_WIDTH = Math.max(CANVAS_MIN_WIDTH, window.innerWidth - 56);
-  const usable = CANVAS_WIDTH - 80; // padding left+right
-  const left   = 40;
-  for (const ax of Object.values(AXIS_MAP)) {
-    ax._xPx = Math.round(left + ax.position * usable);
+  _personColorMap = {};
+  _personColorIdx = 0;
+  _companyLayout  = {};
+
+  // 1. Grouper les sociétés par axe narratif
+  const axisCompanies = {};
+  for (const ax of Object.values(AXIS_MAP)) axisCompanies[ax.id] = [];
+
+  for (const ent of Object.values(ENTITIES)) {
+    if (ent.schema !== 'Company') continue;
+    const axId = p1(ent, 'axis') || Object.keys(AXIS_MAP)[0];
+    if (!axisCompanies[axId]) axisCompanies[axId] = [];
+    axisCompanies[axId].push(ent);
+  }
+
+  // 2. Lane-packing horizontal par axe.
+  //    Chaque société obtient une lane propre si elle chevauche temporellement
+  //    une autre société déjà dans la même lane (comparaison ISO string).
+  //    ax._xStart   : bord gauche de la zone de bandes pour cet axe
+  //    ax._xPx      : centre de l'axe (milieu de la zone bandes) — ancrage des cartes sans société
+  //    ax._wPx      : largeur totale de la zone de bandes
+  let cursor = AXIS_LEFT;
+  const axIds = Object.keys(AXIS_MAP);
+  for (let ai = 0; ai < axIds.length; ai++) {
+    const ax  = AXIS_MAP[axIds[ai]];
+    const cos = axisCompanies[ax.id] || [];
+    ax._xStart = cursor;
+
+    cos.sort((a, b) => {
+      const da = p1(a, 'incorporationDate') || '0000';
+      const db = p1(b, 'incorporationDate') || '0000';
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
+
+    // laneEndStr[lane] = date ISO de fin de la dernière société dans cette lane
+    const laneEndStr = [];
+    for (const co of cos) {
+      const incStr = p1(co, 'incorporationDate') || '';
+      const disStr = p1(co, 'dissolutionDate')   || '';
+
+      // Chercher une lane libre : fin < début de la société courante
+      let lane = laneEndStr.findIndex(e => !e || e <= (incStr || '0000'));
+      if (lane === -1) { lane = laneEndStr.length; }
+      laneEndStr[lane] = disStr || '9999-12-31';
+
+      _companyLayout[co.id] = {
+        xPx:    cursor + lane * BAND_W + Math.floor(lane > 0 ? BAND_GAP * 0 : 0),
+        wPx:    BAND_W,
+        lane,
+        axisId: ax.id,
+        incStr,
+        disStr,
+        yStart: 0,
+        yEnd:   0,
+      };
+    }
+
+    const nLanes = Math.max(1, laneEndStr.length);
+    ax._xPx  = cursor + Math.floor(nLanes * BAND_W / 2);
+    ax._wPx  = nLanes * BAND_W;
+    // Espace entre axes : BAND_GAP entre lanes, AXIS_GAP entre axes distincts
+    cursor  += nLanes * BAND_W + (ai < axIds.length - 1 ? AXIS_GAP : BAND_GAP);
+  }
+
+  // Recalculer CANVAS_WIDTH pour englober toutes les bandes + une carte à droite
+  const CARD_SPACE = 220 + 32; // --card-w + marge
+  CANVAS_WIDTH = Math.max(CANVAS_MIN_WIDTH, cursor + CARD_SPACE);
+}
+
+// Passe 2 : calcul des coordonnées verticales (après buildYearSpine → SCALE_D OK)
+function resolveLayoutY() {
+  // Date du premier événement pour les sociétés sans date d'incorporation
+  const firstEventDate = EVENTS.length ? eventDate(EVENTS[0]) : '2005-01-01';
+  for (const [coId, layout] of Object.entries(_companyLayout)) {
+    layout.yStart = dateY(layout.incStr || firstEventDate || '2005-01-01');
+    layout.yEnd   = layout.disStr ? dateY(layout.disStr) : CANVAS_HEIGHT;
+    // Hauteur minimale de 60px pour que la bande soit toujours visible
+    if (layout.yEnd - layout.yStart < 60) layout.yEnd = layout.yStart + 60;
   }
 }
+
+function computeAxisPositions() { computeLayout(); }
 
 /* ═══════════════════════════════════════════════════════════
    DYNAMIC AXIS ASSIGNMENT (for events without explicit axis)
@@ -1192,40 +1485,85 @@ function buildYearSpine() {
    AXIS RAILS
 ═══════════════════════════════════════════════════════════ */
 function buildAxisRails(canvas) {
+  // Passe 2 : résolution des coordonnées Y (SCALE_D est maintenant calibré)
+  resolveLayoutY();
+
+  // ── Zones de fond par axe narratif ──
   for (const ax of Object.values(AXIS_MAP)) {
-    // Rail line
-    const rail = document.createElement('div');
-    rail.className = 'axis-rail';
-    rail.id = `rail-${ax.id}`;
-    rail.style.left = ax._xPx + 'px';
-    rail.style.height = CANVAS_HEIGHT + 'px';
+    const zone = document.createElement('div');
+    zone.className = 'axis-zone';
+    zone.style.left       = ax._xStart + 'px';
+    zone.style.width      = ax._wPx + 'px';
+    zone.style.background = ax.color;
+    canvas.appendChild(zone);
+  }
 
-    const line = document.createElement('div');
-    line.className = 'axis-rail-line';
-    line.style.background = ax.color;
-    line.style.height = '100%';
-    line.style.width = '1px';
-    rail.appendChild(line);
+  // ── Bandes de sociétés ──
+  // Précollecte des directorships indexés par company
+  const dirsByCompany = {}; // companyId → [directorship entity]
+  for (const ent of Object.values(ENTITIES)) {
+    if (ent.schema !== 'Directorship') continue;
+    const org = p1(ent, 'organization');
+    if (!org) continue;
+    if (!dirsByCompany[org]) dirsByCompany[org] = [];
+    dirsByCompany[org].push(ent);
+  }
 
-    canvas.appendChild(rail);
+  for (const [coId, layout] of Object.entries(_companyLayout)) {
+    const co  = ENTITIES[coId];
+    if (!co) continue;
+    const ax  = AXIS_MAP[layout.axisId];
+    if (!ax) continue;
 
-    // Sticky column header
-    const hdr = document.createElement('div');
-    hdr.className = 'axis-col-header';
-    hdr.id = `col-hdr-${ax.id}`;
-    hdr.style.cssText = `
-      position:absolute;
-      left:${ax._xPx - 60}px;
-      top:0;
-      width:120px;
-      text-align:center;
-      padding-top:10px;
-      pointer-events:none;
-    `;
-    hdr.innerHTML = `
-      <div style="font-family:var(--font-mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:${ax.color};opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ax.label}</div>
-    `;
-    canvas.appendChild(hdr);
+    const status = p1(co, 'status') || 'default';
+    const bg     = STATUS_BG[status] || STATUS_BG.default;
+
+    const band = document.createElement('div');
+    band.className = 'co-band';
+    band.id = `co-${coId}`;
+    band.style.left       = layout.xPx + 'px';
+    band.style.top        = layout.yStart + 'px';
+    band.style.width      = layout.wPx + 'px';
+    band.style.height     = (layout.yEnd - layout.yStart) + 'px';
+    band.style.background    = bg;
+    band.style.borderColor   = 'rgba(0,0,0,0.15)';
+    band.style.borderTopColor = ax.color;
+
+    // Étiquette sticky
+    const label = document.createElement('div');
+    label.className = 'co-band-label';
+    label.style.color = ax.color;
+    label.title = p1(co, 'name') || coId;
+    label.textContent = (p1(co, 'name') || coId).slice(0, 20);
+    band.appendChild(label);
+
+    // Mandats (Directorship) dans cette société
+    const dirs = dirsByCompany[coId] || [];
+    for (const dir of dirs) {
+      const start = p1(dir, 'startDate');
+      const end   = p1(dir, 'endDate');
+      const personId = p1(dir, 'director');
+      if (!start) continue;
+
+      const yS = dateY(start);
+      const yE = end ? dateY(end) : layout.yEnd;
+      const col = personColor(personId);
+
+      // Décalage horizontal dans la bande selon l'index du dirigeant
+      const pIdx = Object.keys(_personColorMap).indexOf(personId);
+      const mx   = 3 + (pIdx % 3) * 4; // 3 colonnes de 4px dans la bande
+
+      const line = document.createElement('div');
+      line.className = 'mandate-line';
+      line.style.left       = mx + 'px';
+      line.style.top        = (yS - layout.yStart) + 'px';
+      line.style.height     = Math.max(2, yE - yS) + 'px';
+      line.style.background = col;
+      line.title = `${p1(dir,'role') || 'Mandat'} — ${personId}`;
+      band.appendChild(line);
+    }
+
+    canvas.appendChild(band);
   }
 }
 
@@ -1238,27 +1576,105 @@ function buildAxisRails(canvas) {
    EVENT NODES
 ═══════════════════════════════════════════════════════════ */
 function buildEvents_DOM(canvas) {
+  // ── Passe 1 : calculer le X naturel et le Y naturel de chaque événement ──
+  const items = []; // { ev, ax, xNat, yNat }
   for (const ev of EVENTS) {
     const ax = AXIS_MAP[ev._resolvedAxis];
     if (!ax) continue;
 
-    const y = dateY(eventDate(ev));
-    const x = ax._xPx;
+    const yNat = dateY(eventDate(ev));
+    // Priorité 1 : bord droit de la bande de la société référencée (ftmRef ou organization)
+    // Priorité 2 : bord droit de la zone de bandes de l'axe narratif (fallback)
+    let xNat = ax._xStart + (ax._wPx || BAND_W) + CARD_OFFSET;
+    const evRefs = pAll(ev, 'ftmRef').concat(pAll(ev, 'organization'));
+    let foundCo = false;
+    for (const ref of evRefs) {
+      if (_companyLayout[ref]) {
+        xNat = _companyLayout[ref].xPx + _companyLayout[ref].wPx + CARD_OFFSET;
+        foundCo = true;
+        break;
+      }
+    }
+    // Si plusieurs sociétés référencées, prendre la plus à droite (dernière lane)
+    if (!foundCo && evRefs.length > 1) {
+      let maxX = -1;
+      for (const ref of evRefs) {
+        if (_companyLayout[ref]) {
+          const rx = _companyLayout[ref].xPx + _companyLayout[ref].wPx;
+          if (rx > maxX) { maxX = rx; xNat = rx + CARD_OFFSET; }
+        }
+      }
+    }
+    items.push({ ev, ax, xNat: Math.round(xNat), yNat });
+  }
+
+  // ── Passe 2 : dépilement vertical par groupe d'ancrage X ──
+  // Grouper par xNat arrondi (évite les groupes distincts dus à la virgule flottante)
+  const byX = new Map();
+  for (const item of items) {
+    const key = item.xNat;
+    if (!byX.has(key)) byX.set(key, []);
+    byX.get(key).push(item);
+  }
+
+  // Pour chaque groupe, trier par Y puis décaler les cartes compressées
+  const placed = []; // { ev, ax, xNat, yFinal, peeked, stackDepth }
+  for (const [, group] of byX) {
+    group.sort((a, b) => a.yNat - b.yNat);
+    let cursor = -Infinity; // bas estimé de la dernière carte placée
+    for (let i = 0; i < group.length; i++) {
+      const item = group[i];
+      let yFinal = item.yNat;
+      let peeked = false;
+      let stackDepth = 0;
+
+      if (yFinal < cursor + PEEK_GAP) {
+        // Collision : comprimer et décaler
+        yFinal = cursor + PEEK_GAP;
+        peeked = true;
+        // Compte le nombre de cartes compressées consécutives au-dessus
+        stackDepth = placed.filter(p => p.xNat === item.xNat && p.peeked).length;
+      }
+
+      const cardH = peeked ? PEEK_H : CARD_EST_H;
+      cursor = yFinal + cardH;
+      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
+    }
+  }
+
+  // ── Passe 3 : rendu DOM ──
+  for (const { ev, ax, xNat, yNat, yFinal, peeked, stackDepth } of placed) {
     const anchor = document.createElement('div');
     anchor.className = 'ev-anchor';
     anchor.id = `ev-${ev.id}`;
     anchor.setAttribute('data-axis', ev._resolvedAxis);
-    anchor.style.left  = x + 'px';
-    anchor.style.top   = y + 'px';
+    anchor.style.left = xNat + 'px';
+    anchor.style.top  = yFinal + 'px';
 
-    // Segment bar for duration events (Directorship etc.)
+    // Si décalée : petit trait pointillé vertical reliant yNat à yFinal
+    if (peeked && yFinal > yNat + 6) {
+      const connector = document.createElement('div');
+      connector.style.cssText = [
+        'position:absolute',
+        'left:0px',
+        'top:' + (yNat - yFinal) + 'px',
+        'width:1px',
+        'height:' + (yFinal - yNat) + 'px',
+        'border-left:1px dashed rgba(160,155,148,0.4)',
+        'pointer-events:none',
+        'z-index:1',
+      ].join(';');
+      anchor.appendChild(connector);
+    }
+
+    // Segment bar pour événements à durée
     const endDate = eventEndDate(ev);
     if (endDate) {
       const yEnd = dateY(endDate);
       const seg = document.createElement('div');
       seg.className = 'ev-segment';
       seg.style.top    = '0px';
-      seg.style.height = (yEnd - y) + 'px';
+      seg.style.height = (yEnd - yFinal) + 'px';
       seg.style.background = ax.color;
       anchor.appendChild(seg);
     }
@@ -1267,13 +1683,20 @@ function buildEvents_DOM(canvas) {
     const dot = document.createElement('div');
     dot.className = 'ev-dot' + (isAlert(ev) ? ' alert-dot' : '');
     dot.style.background = ax.color;
-    dot.style.top = (-7) + 'px';
+    dot.style.top  = (-7) + 'px';
+    dot.style.left = '0px';   /* ancré au bord gauche de l'anchor = bord droit bande */
     anchor.appendChild(dot);
 
     // Card
     const card = document.createElement('div');
-    card.className = `ev-card right${isAlert(ev)?' is-alert':''}`;
+    const cls = ['ev-card', 'right', peeked ? 'peeked' : '', isAlert(ev) ? 'is-alert' : '']
+      .filter(Boolean).join(' ');
+    card.className = cls;
     card.style.borderLeftColor = ax.color;
+    card.style.zIndex = String(peeked ? 10 + stackDepth : 20 + stackDepth);
+    if (peeked && stackDepth > 0) {
+      card.setAttribute('data-stack-depth', '+' + stackDepth);
+    }
 
     const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'), p1(ev,'amountCurrency')||p1(ev,'currency'));
     const dateStr = eventDate(ev);
@@ -1290,13 +1713,35 @@ function buildEvents_DOM(canvas) {
       <div class="ev-card-schema">${ev.schema}</div>
     `;
 
-    // Events
+    // Lien(s) source sur la carte
+    const srcUrls = pAll(ev, 'sourceUrl');
+    if (srcUrls.length) {
+      const firstUrl  = srcUrls[0];
+      const srcLabels = pAll(ev, 'sourceLabel');
+      let srcText;
+      if (srcLabels[0]) {
+        srcText = srcLabels[0].length > 30 ? srcLabels[0].slice(0, 28) + '…' : srcLabels[0];
+      } else {
+        try { srcText = new URL(firstUrl).hostname.replace(/^www\./, ''); } catch { srcText = firstUrl.slice(0, 28); }
+      }
+      const srcLink = document.createElement('a');
+      srcLink.href = firstUrl;
+      srcLink.target = '_blank';
+      srcLink.rel = 'noopener';
+      srcLink.className = 'ev-card-source';
+      srcLink.title = firstUrl;
+      srcLink.innerHTML =
+        `<span class="ev-card-source-icon">↗</span>${esc(srcText)}` +
+        (srcUrls.length > 1 ? `<span class="ev-card-source-extra">+${srcUrls.length - 1}</span>` : '');
+      srcLink.addEventListener('click', e => e.stopPropagation()); // ne pas déclencher openModal
+      card.appendChild(srcLink);
+    }
+
+    // Survol géré par CSS .ev-anchor:hover { z-index:900 } — pas de handler JS.
     dot.addEventListener('mouseenter', (e) => showTooltip(e, ev));
     dot.addEventListener('mouseleave',  hideTooltip);
     card.addEventListener('click', () => openModal(ev));
     dot.addEventListener('click',  () => openModal(ev));
-
-    // Connector highlight on hover
     dot.addEventListener('mouseenter', () => highlightConnectors(ev.id));
     dot.addEventListener('mouseleave',  clearConnectorHighlights);
     card.addEventListener('mouseenter', () => highlightConnectors(ev.id));
@@ -1402,21 +1847,110 @@ function buildHeaderAxes() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   FILTRES : axe, schéma, texte
+═══════════════════════════════════════════════════════════ */
+let MUTED_SCHEMAS = new Set();
+let SEARCH_TEXT   = '';
+
+function applyFilters() {
+  const needle = SEARCH_TEXT.trim().toLowerCase();
+  document.querySelectorAll('.ev-anchor').forEach(el => {
+    const evId   = el.id.replace('ev-', '');
+    const evAxis = el.getAttribute('data-axis');
+    const ev     = EVENTS.find(e => e.id === evId);
+    if (!ev) return;
+
+    // Critère 1 : axe muté
+    const hiddenByAxis = MUTED_AXES.has(evAxis);
+
+    // Critère 2 : schéma muté
+    const hiddenBySchema = MUTED_SCHEMAS.size > 0 && !MUTED_SCHEMAS.has(ev.schema);
+
+    // Critère 3 : texte absent
+    let hiddenBySearch = false;
+    if (needle) {
+      const hay = [
+        eventName(ev),
+        eventDesc(ev) || '',
+        eventDate(ev) || '',
+        ev.schema,
+        p1(ev, 'sourceLabel') || '',
+      ].join(' ').toLowerCase();
+      hiddenBySearch = !hay.includes(needle);
+    }
+
+    el.classList.toggle('axis-hidden', hiddenByAxis || hiddenBySchema || hiddenBySearch);
+  });
+}
+
+function buildSchemaFilters() {
+  // Recenser les schémas présents dans EVENTS
+  const counts = {};
+  for (const ev of EVENTS) counts[ev.schema] = (counts[ev.schema] || 0) + 1;
+
+  const container = document.getElementById('inf-schema-btns');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Icônes par schéma
+  const SCHEMA_ICON = {
+    Event:        '⬡',
+    Document:     '◻',
+    Directorship: '◈',
+    Payment:      '⊛',
+    Ownership:    '◉',
+  };
+
+  for (const [schema, count] of Object.entries(counts).sort((a,b)=>b[1]-a[1])) {
+    const btn = document.createElement('button');
+    btn.className = 'inf-schema-btn active';
+    btn.dataset.schema = schema;
+    btn.title = `${schema} (${count})`;
+    btn.innerHTML = `${SCHEMA_ICON[schema] || '○'} ${schema}`;
+    btn.addEventListener('click', () => {
+      if (MUTED_SCHEMAS.has(schema)) {
+        MUTED_SCHEMAS.delete(schema);
+        btn.classList.add('active');
+      } else {
+        MUTED_SCHEMAS.add(schema);
+        btn.classList.remove('active');
+      }
+      applyFilters();
+    });
+    container.appendChild(btn);
+  }
+}
+
+// Recherche texte : debounced
+let _searchDebounce = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('inf-search');
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    clearTimeout(_searchDebounce);
+    _searchDebounce = setTimeout(() => {
+      SEARCH_TEXT = inp.value;
+      applyFilters();
+    }, 200);
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { inp.value = ''; SEARCH_TEXT = ''; applyFilters(); inp.blur(); }
+  });
+});
+
 function toggleAxis(axId) {
   if (MUTED_AXES.has(axId)) MUTED_AXES.delete(axId);
   else MUTED_AXES.add(axId);
 
   document.getElementById(`pill-${axId}`)?.classList.toggle('muted', MUTED_AXES.has(axId));
 
-  document.querySelectorAll('.ev-anchor').forEach(el => {
-    const evAxis = el.getAttribute('data-axis');
-    el.classList.toggle('axis-hidden', MUTED_AXES.has(evAxis));
-  });
-
   document.querySelectorAll('.axis-rail').forEach(el => {
     const id = el.id.replace('rail-','');
     el.style.opacity = MUTED_AXES.has(id) ? '0.1' : '1';
   });
+
+  applyFilters(); // unifié avec les autres filtres
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1739,6 +2273,20 @@ function loaderFile(path, state) {
 async function main() {
   const loader = document.getElementById('loader');
 
+  // ── Log de démarrage : identifier la version exacte ──
+  console.group('%c⬡ Affaire DeSavoie — chargement', 'color:#e67e22;font-weight:600');
+  console.log(`BUILD_ID  : ${BUILD_ID}`);
+  // Tenter de lire le nom réel de la page (fonctionne en HTTP, pas en file://)
+  try {
+    const resp = await fetch(location.href, {method:'HEAD'});
+    const cd = resp.headers.get('content-disposition') || '';
+    const fnMatch = cd.match(/filename="([^"]+)"/);
+    console.log(`index.html: ${fnMatch ? fnMatch[1] : location.pathname.split('/').pop() || location.href}`);
+  } catch {
+    console.log(`index.html: ${location.pathname.split('/').pop() || location.href}`);
+  }
+  console.groupEnd();
+
   // 0. Détecter le protocole file:// — fetch() bloqué par le navigateur
   if (location.protocol === 'file:') {
     loader.querySelector('.loader-text').innerHTML =
@@ -1782,6 +2330,14 @@ async function main() {
     hash: manifestHash,
     size: manifestText.length,
   });
+
+  // Log manifest
+  const mvLabel = manifestVersion > 0 ? ` (${manifestVersion})` : '';
+  console.log(
+    `%cmanifest${mvLabel}.json%c  ${manifestHash.slice(0,12)}…  ${(manifestText.length/1024).toFixed(1)} Ko  axes:${(manifest.axes||[]).length}  fichiers:${(manifest.files||[]).length}`,
+    'font-weight:600;color:#1a1c22',
+    'color:#6b6762'
+  );
 
   MANIFEST = manifest;
   for (const ax of (manifest.axes||[])) AXIS_MAP[ax.id] = ax;
@@ -1852,6 +2408,17 @@ async function main() {
     const loaderState = status === INT_ALTERED ? 'error' :
                         status === INT_NEW      ? 'warn'  : 'ok';
     loaderFile(base, loaderState);
+    // Log console : nom effectif chargé, version Windows, hash SHA-256
+    const vLabel = bestVersion > 0 ? ` (${bestVersion})` : '';
+    const sLabel = status === INT_OK      ? '✓ ok'
+                 : status === INT_NEW     ? '~ nouveau'
+                 : status === INT_ALTERED ? '✗ altéré'
+                 : '? inconnu';
+    console.log(
+      `%c${stem}${vLabel}${ext}%c  ${sLabel}  ${hash.slice(0,12)}…  ${(bestSize/1024).toFixed(1)} Ko`,
+      'font-weight:600;color:#1a1c22',
+      'color:#6b6762'
+    );
   });
 
   await Promise.all(fetches);
@@ -1870,6 +2437,7 @@ async function main() {
   buildAxisRails(canvas);
   buildHeaderAxes();
   buildEvents_DOM(canvas);
+  buildSchemaFilters();
 
   // 5. Connecteurs SVG
   const svg = document.getElementById('connector-svg');
@@ -1986,18 +2554,19 @@ function buildDensityHeatmap() {
   const ctx = hm.getContext('2d');
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // ── Palette neutre-chaude (facilement modifiable) ──────────
-  // Chaque entrée : [r, g, b] — le cycle interpolera entre elles
+  // ── Palette polychrome visible sur fond clair (--smoke #f2f1ee) ──
+  // Teintes alternées chaud/froid, chaque cycle = SCALE_T jours.
+  // Les valeurs RGB sont des tons moyens — l'alpha fait le reste.
   const PALETTE = [
-    [24,  24,  22],   // fond sombre (quasi-noir chaud)
-    [38,  31,  22],   // brun-ardoise
-    [52,  40,  24],   // ocre profond
-    [62,  50,  36],   // brun-beige
-    [72,  60,  44],   // beige chaud
-    [58,  46,  32],   // retour ocre
-    [38,  31,  22],   // retour brun
+    [180, 140, 100],  // ocre chaud
+    [140, 160, 175],  // bleu-gris froid
+    [160, 120,  90],  // brun terracotta
+    [120, 150, 165],  // ardoise bleue
+    [175, 145, 105],  // sable chaud
+    [130, 155, 170],  // gris-bleu ciel
+    [155, 125,  88],  // ocre retour
   ];
-  const MAX_ALPHA = 0.13;
+  const MAX_ALPHA = 0.09;  // par bande de 2px — visible par accumulation
 
   // ── Cycle adaptatif : 1 cycle = SCALE_T jours ──────────────
   // On mappe les jours → position dans le cycle [0, 1[
@@ -2064,28 +2633,34 @@ canvasEl.addEventListener('scroll', () => {
   _scrollSyncing = false;
 });
 
+// ── Rebuild complet du canvas (bandes + événements + connecteurs + heatmap) ──
+// Appelé après tout changement de SCALE_T ou au resize.
+function rebuildCanvas() {
+  computeAxisPositions();
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML =
+    '<canvas id="density-heatmap"></canvas>' +
+    '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
+  canvas.style.width  = CANVAS_WIDTH + 'px';
+  buildYearSpine();               // recalibre SCALE_D et CANVAS_HEIGHT
+  canvas.style.height = CANVAS_HEIGHT + 'px';
+  buildAxisRails(canvas);         // bandes sociétés (resolveLayoutY ici)
+  buildHeaderAxes();
+  buildEvents_DOM(canvas);
+  buildSchemaFilters();
+  const svg = document.getElementById('connector-svg');
+  svg.style.width  = CANVAS_WIDTH  + 'px';
+  svg.style.height = CANVAS_HEIGHT + 'px';
+  buildConnectors(svg);
+  buildDensityHeatmap();
+  syncScrollTrackWidth();
+}
+
 // Handle resize
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    computeAxisPositions();
-    const canvas = document.getElementById('canvas');
-    canvas.innerHTML =
-      '<canvas id="density-heatmap"></canvas>' +
-      '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
-    canvas.style.width  = CANVAS_WIDTH + 'px';
-    buildYearSpine();  // fixe CANVAS_HEIGHT
-    canvas.style.height = CANVAS_HEIGHT + 'px';
-    buildAxisRails(canvas);
-    buildEvents_DOM(canvas);
-    const svg = document.getElementById('connector-svg');
-    svg.style.width  = CANVAS_WIDTH  + 'px';
-    svg.style.height = CANVAS_HEIGHT + 'px';
-    buildConnectors(svg);
-    buildDensityHeatmap();
-    syncScrollTrackWidth();
-  }, 200);
+  resizeTimer = setTimeout(rebuildCanvas, 200);
 });
 
 main().then(() => {
@@ -2102,6 +2677,10 @@ main().then(() => {
     SCALE_T_OPT = bestT;
     SCALE_T     = bestT;
 
+    // Reconstruire entièrement avec le T optimal
+    // (main() a rendu avec SCALE_T=1500 ; les positions Y sont fausses)
+    rebuildCanvas();
+
     // Positionner le slider sur T optimal
     const slider = document.getElementById('inf-scale-slider');
     if (slider) {
@@ -2112,34 +2691,16 @@ main().then(() => {
       slider.addEventListener('input', () => {
         const frac = parseInt(slider.value) / 100;
         SCALE_T = Math.round(Math.exp(logMin + frac * (logMax - logMin)));
-        // Debounce rebuild
         clearTimeout(slider._timer);
         slider._timer = setTimeout(() => {
-          computeAxisPositions();
-          const canvas = document.getElementById('canvas');
-          canvas.innerHTML =
-            '<canvas id="density-heatmap"></canvas>' +
-            '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
-          canvas.style.width  = CANVAS_WIDTH + 'px';
-          buildYearSpine();  // fixe CANVAS_HEIGHT
-          canvas.style.height = CANVAS_HEIGHT + 'px';
-          buildAxisRails(canvas);
-          buildEvents_DOM(canvas);
-          const svg = document.getElementById('connector-svg');
-          svg.style.width  = CANVAS_WIDTH  + 'px';
-          svg.style.height = CANVAS_HEIGHT + 'px';
-          buildConnectors(svg);
-          buildDensityHeatmap();
-          syncScrollTrackWidth();
+          rebuildCanvas();
           updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
         }, 150);
-        // Mise à jour immédiate du label
         updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
       });
     }
 
     updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
-    buildDensityHeatmap();
   }
 }).catch(console.error);
 </script>
