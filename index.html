@@ -1883,28 +1883,11 @@ function buildEvents_DOM(canvas) {
     if (!ax) continue;
 
     const yNat = dateY(eventDate(ev));
-    // Priorité 1 : bord droit de la bande de la société référencée (ftmRef ou organization)
-    // Priorité 2 : bord droit de la zone de bandes de l'axe narratif (fallback)
-    let xNat = ax._xStart + (ax._wPx || BAND_W) + CARD_OFFSET;
-    const evRefs = pAll(ev, 'ftmRef').concat(pAll(ev, 'organization'));
-    let foundCo = false;
-    for (const ref of evRefs) {
-      if (_companyLayout[ref]) {
-        xNat = _companyLayout[ref].xPx + _companyLayout[ref].wPx + CARD_OFFSET;
-        foundCo = true;
-        break;
-      }
-    }
-    // Si plusieurs sociétés référencées, prendre la plus à droite (dernière lane)
-    if (!foundCo && evRefs.length > 1) {
-      let maxX = -1;
-      for (const ref of evRefs) {
-        if (_companyLayout[ref]) {
-          const rx = _companyLayout[ref].xPx + _companyLayout[ref].wPx;
-          if (rx > maxX) { maxX = rx; xNat = rx + CARD_OFFSET; }
-        }
-      }
-    }
+    // Ancrage X : bord droit de la zone de bandes de l'axe + CARD_OFFSET.
+    // L'ancrage per-company (xPx + wPx + CARD_OFFSET) est incorrect car les bandes
+    // sont contiguës — le point atterrirait à l'intérieur de la bande adjacente.
+    // Toutes les cartes d'un axe s'alignent en une colonne à droite du bloc de bandes.
+    const xNat = ax._xStart + (ax._wPx || BAND_W) + CARD_OFFSET;
     items.push({ ev, ax, xNat: Math.round(xNat), yNat });
   }
 
