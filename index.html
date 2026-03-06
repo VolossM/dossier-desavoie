@@ -2298,18 +2298,13 @@ async function main() {
     return;
   }
 
-  // 1. Charger le manifest (avec détection de version Windows)
+  // 1. Charger le manifest — nom canonique uniquement (deploy.py gère le versionnage)
   let manifest;
-  const manifestCandidates = ['manifest.json'];
-  for (let n = 1; n <= 9; n++) manifestCandidates.push(`manifest (${n}).json`);
-
-  let manifestText = null, manifestPath = null;
-  for (const candidate of manifestCandidates.reverse()) { // du plus élevé au plus bas
-    try {
-      const r = await fetch(candidate);
-      if (r.ok) { manifestText = await r.text(); manifestPath = candidate; break; }
-    } catch {}
-  }
+  let manifestText = null;
+  try {
+    const r = await fetch('manifest.json');
+    if (r.ok) manifestText = await r.text();
+  } catch {}
   if (!manifestText) {
     loader.querySelector('.loader-text').textContent = 'Erreur : manifest.json introuvable';
     loader.querySelector('.loader-text').style.color = '#e74c3c';
@@ -2321,7 +2316,7 @@ async function main() {
     loader.querySelector('.loader-text').style.color = '#e74c3c';
     return;
   }
-  const manifestVersion = parseInt((manifestPath.match(/\((\d+)\)/) || ['','0'])[1]) || 0;
+  const manifestVersion = 0; // versionnage géré par deploy.py, pas par le navigateur
   const manifestHash = await sha256hex(manifestText);
   FILE_REPORTS.push({
     name: 'manifest.json',
@@ -2356,27 +2351,19 @@ async function main() {
     const stem   = parts ? parts[2] : base;
     const ext    = parts ? parts[3] : '';
 
-    // Construire la liste des candidats par ordre croissant de version
-    const candidates = [`${dir}${stem}${ext}`];
-    for (let n = 1; n <= 9; n++) candidates.push(`${dir}${stem} (${n})${ext}`);
-
+    // Charger le nom canonique uniquement — deploy.py a résolu le versionnage
     loaderFile(base, 'loading');
 
     let bestText = null, bestVersion = 0, bestSize = 0;
 
-    // On tente tous les candidats et garde le numéro le plus élevé qui répond
-    await Promise.all(candidates.map(async (candidate, idx) => {
-      try {
-        const r = await fetch(candidate);
-        if (!r.ok) return;
-        const text = await r.text();
-        if (idx >= bestVersion || (idx === 0 && bestVersion === 0)) {
-          bestText    = text;
-          bestVersion = idx;
-          bestSize    = text.length;
-        }
-      } catch {}
-    }));
+    try {
+      const r = await fetch(base);
+      if (r.ok) {
+        bestText    = await r.text();
+        bestVersion = 0;
+        bestSize    = bestText.length;
+      }
+    } catch {}
 
     if (!bestText) {
       loaderFile(base, 'warn');
