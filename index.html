@@ -418,6 +418,21 @@ body::before {
   z-index: 900 !important;
 }
 
+/* Nœud dot — positionné directement sur la bande société (indépendant de la carte) */
+.ev-dot-node {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none; /* les événements sont capturés par .ev-dot enfant */
+}
+.ev-dot-node .ev-dot {
+  pointer-events: all;
+  top: 0;
+  left: 0;
+}
+.ev-dot-node .ev-segment {
+  left: 0;
+}
+
 .ev-dot {
   width: calc(var(--dot-r)*2);
   height: calc(var(--dot-r)*2);
@@ -606,6 +621,19 @@ body::before {
   transition: opacity 0.2s;
 }
 .connector-line.visible { opacity: 0.5; }
+
+/* Trait permanent reliant chaque carte à son dot sur bande */
+.dot-card-line {
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  fill: none;
+  stroke-opacity: 0.25;
+  transition: stroke-opacity 0.15s;
+}
+.dot-card-line.highlighted {
+  stroke-opacity: 0.75;
+  stroke-dasharray: none;
+}
 
 /* ═══════════════════════════════════════════
    MODAL
@@ -1372,6 +1400,10 @@ function computeLayout() {
 
   for (const ent of Object.values(ENTITIES)) {
     if (ent.schema !== 'Company') continue;
+    // Exclure les doublons explicitement marqués _deprecated (noms antérieurs d'une entité
+    // canonique — ex. Sunny Meadows / Gaia Resources / GAIA Capital → company-circle-square).
+    // Ces entités ne génèrent pas de bandes mais restent référençables pour entityAxis().
+    if (ent._deprecated && ent._deprecated.length) continue;
     const axId = p1(ent, 'axis') || Object.keys(AXIS_MAP)[0];
     if (!axisCompanies[axId]) axisCompanies[axId] = [];
     axisCompanies[axId].push(ent);
@@ -1884,7 +1916,16 @@ function buildAxisRails(canvas) {
 /* ═══════════════════════════════════════════════════════════
    EVENT NODES
 ═══════════════════════════════════════════════════════════ */
-function buildEvents_DOM(canvas) {
+// Retourne le X du dot : bord droit de la bande de la 1ère société ftmRef
+// qui possède un layout. Fallback = bord droit du bloc de bandes de l'axe.
+function evDotX(ev, ax) {
+  const refs = pAll(ev, 'ftmRef');
+  for (const ref of refs) {
+    const lay = _companyLayout[ref];
+    if (lay) return lay.xPx + lay.wPx;
+  }
+  return ax._xStart + (ax._wPx || BAND_W);
+}
   // ── Passe 1 : calculer le X naturel et le Y naturel de chaque événement ──
   const items = []; // { ev, ax, xNat, yNat }
   for (const ev of EVENTS) {
@@ -1936,48 +1977,44 @@ function buildEvents_DOM(canvas) {
 
   // ── Passe 3 : rendu DOM ──
   for (const { ev, ax, xNat, yNat, yFinal, peeked, stackDepth } of placed) {
-    const anchor = document.createElement('div');
-    anchor.className = 'ev-anchor';
-    anchor.id = `ev-${ev.id}`;
-    anchor.setAttribute('data-axis', ev._resolvedAxis);
-    anchor.style.left = xNat + 'px';
-    anchor.style.top  = yFinal + 'px';
+    const DOT_R = 7; // doit correspondre à --dot-r
 
-    // Si décalée : petit trait pointillé vertical reliant yNat à yFinal
-    if (peeked && yFinal > yNat + 6) {
-      const connector = document.createElement('div');
-      connector.style.cssText = [
-        'position:absolute',
-        'left:0px',
-        'top:' + (yNat - yFinal) + 'px',
-        'width:1px',
-        'height:' + (yFinal - yNat) + 'px',
-        'border-left:1px dashed rgba(160,155,148,0.4)',
-        'pointer-events:none',
-        'z-index:1',
-      ].join(';');
-      anchor.appendChild(connector);
-    }
+    // ── Nœud dot — positionné sur la bande de la société ftmRef ──
+    const xDot = evDotX(ev, ax);
+    const dotNode = document.createElement('div');
+    dotNode.className = 'ev-dot-node';
+    dotNode.setAttribute('data-ev-id', ev.id);
+    dotNode.style.left = xDot + 'px';
+    dotNode.style.top  = yNat + 'px';
 
-    // Segment bar pour événements à durée
+    // Segment bar pour événements à durée (ancré sur le dot)
     const endDate = eventEndDate(ev);
     if (endDate) {
       const yEnd = dateY(endDate);
       const seg = document.createElement('div');
       seg.className = 'ev-segment';
       seg.style.top    = '0px';
-      seg.style.height = (yEnd - yFinal) + 'px';
+      seg.style.height = (yEnd - yNat) + 'px';
       seg.style.background = ax.color;
-      anchor.appendChild(seg);
+      dotNode.appendChild(seg);
     }
 
-    // Dot
     const dot = document.createElement('div');
     dot.className = 'ev-dot' + (isAlert(ev) ? ' alert-dot' : '');
     dot.style.background = ax.color;
-    dot.style.top  = (-7) + 'px';
-    dot.style.left = '0px';   /* ancré au bord gauche de l'anchor = bord droit bande */
-    anchor.appendChild(dot);
+    dotNode.appendChild(dot);
+
+    canvas.appendChild(dotNode);
+
+    // ── Card anchor — colonne d'axe (xNat), position verticale décompressée ──
+    const anchor = document.createElement('div');
+    anchor.className = 'ev-anchor';
+    anchor.id = `ev-${ev.id}`;
+    anchor.setAttribute('data-axis', ev._resolvedAxis);
+    anchor.setAttribute('data-dot-x', xDot);
+    anchor.setAttribute('data-dot-y', yNat);
+    anchor.style.left = xNat + 'px';
+    anchor.style.top  = yFinal + 'px';
 
     // Card
     const card = document.createElement('div');
@@ -2025,19 +2062,19 @@ function buildEvents_DOM(canvas) {
       srcLink.innerHTML =
         `<span class="ev-card-source-icon">↗</span>${esc(srcText)}` +
         (srcUrls.length > 1 ? `<span class="ev-card-source-extra">+${srcUrls.length - 1}</span>` : '');
-      srcLink.addEventListener('click', e => e.stopPropagation()); // ne pas déclencher openModal
+      srcLink.addEventListener('click', e => e.stopPropagation());
       card.appendChild(srcLink);
     }
 
-    // Survol géré par CSS .ev-anchor:hover { z-index:900 } — pas de handler JS.
-    dot.addEventListener('mouseenter', (e) => showTooltip(e, ev));
-    dot.addEventListener('mouseleave',  hideTooltip);
-    card.addEventListener('click', () => openModal(ev));
+    // Handlers — dot et carte partagent les mêmes actions
+    const hlAll = () => { highlightConnectors(ev.id); highlightDotConnector(ev.id); };
+    const clAll = () => { clearConnectorHighlights(); clearDotConnectorHighlights(); };
+    dot.addEventListener('mouseenter', (e) => { showTooltip(e, ev); hlAll(); });
+    dot.addEventListener('mouseleave',  () => { hideTooltip(); clAll(); });
     dot.addEventListener('click',  () => openModal(ev));
-    dot.addEventListener('mouseenter', () => highlightConnectors(ev.id));
-    dot.addEventListener('mouseleave',  clearConnectorHighlights);
-    card.addEventListener('mouseenter', () => highlightConnectors(ev.id));
-    card.addEventListener('mouseleave',  clearConnectorHighlights);
+    card.addEventListener('click', () => openModal(ev));
+    card.addEventListener('mouseenter', hlAll);
+    card.addEventListener('mouseleave',  clAll);
 
     anchor.appendChild(card);
     canvas.appendChild(anchor);
@@ -2099,6 +2136,49 @@ function setConnectorsVisible(v) {
   document.querySelectorAll('.connector-line').forEach(l => {
     l.classList.toggle('visible', v);
   });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DOT-CARD CONNECTOR LINES (trait permanent carte ↔ dot sur bande)
+═══════════════════════════════════════════════════════════ */
+function buildDotConnectors(svg) {
+  const DOT_R = 7;
+  for (const anchor of document.querySelectorAll('.ev-anchor[data-dot-x]')) {
+    const xDot  = +anchor.getAttribute('data-dot-x');
+    const yDot  = +anchor.getAttribute('data-dot-y');
+    const xCard = parseFloat(anchor.style.left);
+    const yCard = parseFloat(anchor.style.top);
+    // Pas de trait si dot et carte sont au même pixel (événement sans ftmRef company)
+    if (Math.abs(xDot - xCard) < 2 && Math.abs(yDot - yCard) < 2) continue;
+
+    const evId = anchor.id.replace(/^ev-/, '');
+    const ev = EVENTS.find(e => e.id === evId);
+    if (!ev) continue;
+    const ax = AXIS_MAP[ev._resolvedAxis];
+    if (!ax) continue;
+
+    // dot center → bord gauche de la colonne carte à hauteur dot
+    const x1 = xDot,  y1 = yDot  + DOT_R;
+    const x2 = xCard, y2 = yCard + DOT_R;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', ax.color);
+    line.classList.add('dot-card-line');
+    line.setAttribute('data-evid', evId);
+    svg.appendChild(line);
+  }
+}
+
+function highlightDotConnector(evId) {
+  document.querySelectorAll('.dot-card-line').forEach(l => {
+    l.classList.toggle('highlighted', l.getAttribute('data-evid') === evId);
+  });
+}
+
+function clearDotConnectorHighlights() {
+  document.querySelectorAll('.dot-card-line').forEach(l => l.classList.remove('highlighted'));
 }
 
 function highlightConnectors(evId) {
@@ -2946,6 +3026,7 @@ function rebuildCanvas() {
   svg.style.width  = CANVAS_WIDTH  + 'px';
   svg.style.height = CANVAS_HEIGHT + 'px';
   buildConnectors(svg);
+  buildDotConnectors(svg);
   buildDensityHeatmap();
   syncScrollTrackWidth();
 }
