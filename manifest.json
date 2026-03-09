@@ -1,8 +1,8 @@
 {
-  "_comment": "Manifest du dossier DeSavoie/Chicherit. Les positions horizontales sont continues (0–1). Les anchor_entities servent au calcul d'affinité pour les événements sans axis explicite. Consolidation mars 2026.",
+  "_comment": "Manifest DeSavoie/Chicherit. Positions horizontales continues (0–1). anchor_entities sert au calcul d'affinité pour les événements sans axis explicite. dedup_strategy: merge = fusion des propriétés si même ID. Consolidation mars 2026 — v2 : axe Zimmermann ajouté en position centrale.",
   "dataset": "affaire-desavoie-chicherit",
-  "title": "Affaire DeSavoie / Chicherit — Fraude obligataire €550 M",
-  "subtitle": "Réseau France · Suisse · Allemagne · Dubaï · Indonésie · 2005–2026",
+  "title": "Affaire DeSavoie / Chicherit",
+  "subtitle": "Fraude obligataire €550 M — France · Suisse · Allemagne · Monaco · Dubaï · Indonésie · Espagne · 2005–2026",
   "classification": "Confidentiel — document de travail",
   "dedup_strategy": "merge",
   "axes": [
@@ -11,7 +11,7 @@
       "label": "Réseau Goldberg",
       "sublabel": "Circle Square · CompLions · Migom",
       "color": "#e67e22",
-      "position": 0.08,
+      "position": 0.06,
       "anchor_entities": [
         "person-goldberg",
         "company-circle-square",
@@ -25,7 +25,7 @@
       "label": "Groupe DeSavoie",
       "sublabel": "Chicherit · Lutz · Impact SAS",
       "color": "#e74c3c",
-      "position": 0.28,
+      "position": 0.24,
       "anchor_entities": [
         "person-chicherit",
         "person-lutz",
@@ -36,22 +36,49 @@
       ]
     },
     {
+      "id": "zimmermann",
+      "label": "Zimmermann",
+      "sublabel": "Monaco · Sygnum · Château Bourdeau",
+      "color": "#1abc9c",
+      "position": 0.44,
+      "anchor_entities": [
+        "person-zimmermann-pa",
+        "person-zimmermann-stephan",
+        "company-holding-zimmermann",
+        "company-c2i",
+        "company-sygnum"
+      ]
+    },
+    {
       "id": "victimes",
       "label": "MCH / RIC",
       "sublabel": "Reynaud · créanciers",
-      "color": "#2ecc71",
-      "position": 0.5,
+      "color": "#3498db",
+      "position": 0.6,
       "anchor_entities": [
         "person-reynaud",
         "company-mch"
       ]
     },
     {
+      "id": "espagne",
+      "label": "Opérations espagnoles",
+      "sublabel": "Perucchi · RIC · Badalona",
+      "color": "#bf7030",
+      "position": 0.72,
+      "anchor_entities": [
+        "company-perucchi",
+        "company-ric",
+        "person-allary",
+        "person-vinuesa"
+      ]
+    },
+    {
       "id": "dubai",
       "label": "Shams Equity",
       "sublabel": "Dubaï · Indonésie",
-      "color": "#f39c12",
-      "position": 0.7,
+      "color": "#f1c40f",
+      "position": 0.78,
       "anchor_entities": [
         "company-shams",
         "person-susiarjo",
@@ -64,15 +91,9 @@
       "id": "procedures",
       "label": "Procédures",
       "sublabel": "TC Chambéry · liquidations",
-      "color": "#9b59b6",
-      "position": 0.88,
+      "color": "#8e44ad",
+      "position": 0.93,
       "anchor_entities": []
-    },
-    {
-      "id": "zimmermann",
-      "label": "Zimmermann",
-      "color": "#6b3fa0",
-      "position": 0.44
     }
   ],
   "files": [
@@ -80,64 +101,74 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "ea7d1146cf988999ce184fe9a3e9e113d101aa71418b6eb5993ecd87a6f7d2cd",
-      "version": 6,
-      "size": 76792,
-      "deployed": "2026-03-06T15:19:25Z"
+      "sha256": "a85dbd7e9103119057331cbe1fc036812f80f3d92be3e6c97ccbf9c6ed803d67",
+      "version": 30,
+      "size": 106636,
+      "deployed": "2026-03-09T02:18:06Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "4e7a07706e42a139b5d79d25bf7534e8ff64e3bc558380badfac704a67e22069",
-      "version": 5,
-      "size": 40567,
-      "deployed": "2026-03-06T15:19:25Z"
+      "sha256": "e37a53bd434de54db4d4d8dd11a146ae75e74c5b592ea3c168ae1d02b0fefc3a",
+      "version": 28,
+      "size": 65585,
+      "deployed": "2026-03-09T02:18:06Z"
+    },
+    {
+      "path": "data/zimmermann.ftm.jsonl",
+      "axis": "zimmermann",
+      "label": "Réseau Zimmermann — Monaco · Sygnum",
+      "sha256": "239b0260895437998443e544c31abfa96ed8a764f03413cbab32ded3db610153",
+      "version": 30,
+      "size": 29681,
+      "deployed": "2026-03-09T02:18:06Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "efedf1e3d21cd66f018fa35d3b797b878d380ca969ea3fac011faa33c238f045",
-      "version": 4,
-      "size": 18476,
-      "deployed": "2026-03-06T15:19:25Z"
+      "sha256": "4ecb9092a44feb5ceb1ae9c4e6d1e6fa32447f6fc64e9fc34c19b69b3eb318d7",
+      "version": 27,
+      "size": 34480,
+      "deployed": "2026-03-09T02:18:06Z"
+    },
+    {
+      "path": "data/espagne.ftm.jsonl",
+      "axis": "espagne",
+      "label": "Opérations espagnoles — Perucchi / RIC / Badalona",
+      "sha256": "0d50b6ee6601e43d2194d391eb6e0d385d8503b7e0ff330e5c57722f2a4de1bc",
+      "version": 0,
+      "size": 16075,
+      "deployed": "2026-03-09T02:18:06Z"
     },
     {
       "path": "data/shams_indonesie.ftm.jsonl",
       "axis": "dubai",
       "label": "Shams Equity / Dubaï–Indonésie",
-      "sha256": "2b3d67652e44416bf010d4df8eddd6b90ba70b295e75608ca28ea054717ab17e",
-      "version": 5,
-      "size": 11477,
-      "deployed": "2026-03-06T15:19:25Z"
+      "sha256": "cb71a7c9c4b3ee8f7492cdf606ee6b1cbca5fded34fffedbcbecd7dad2cbe938",
+      "version": 28,
+      "size": 16367,
+      "deployed": "2026-03-09T02:18:06Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
       "axis": "procedures",
       "label": "Procédures collectives",
-      "sha256": "bb9e89b185f2f9dde42d99d179389f49e19b049439c148a83a000b0bd8367e20",
-      "version": 2,
-      "size": 6184,
-      "deployed": "2026-03-06T10:33:37Z"
+      "sha256": "1e43efe62c5bf5d8417854003d4a82c07f0f306597102feaf22f126a7125e7a3",
+      "version": 26,
+      "size": 10787,
+      "deployed": "2026-03-09T02:18:06Z"
     },
     {
       "path": "data/presse.ftm.jsonl",
       "axis": null,
       "label": "Révélations & presse (axe dynamique)",
-      "sha256": "4bdd9f00ad8173899bce055e3b19205536d96cbcde46ef074f0372d5a54ae893",
-      "version": 4,
+      "sha256": "571c2df0eed9862dcdd31651eaafcf63d6ec6cf6b26fa84340ec408ecbd6d053",
+      "version": 27,
       "size": 7392,
-      "deployed": "2026-03-06T15:19:25Z"
-    },
-    {
-      "path": "data/zimmermann.ftm.jsonl",
-      "axis": "zimmermann",
-      "sha256": "dfe746165ee9fcc2f9b87dd9774d716cfe3ec2f342c0637d6031275d5129e651",
-      "version": 7,
-      "size": 20276,
-      "deployed": "2026-03-06T15:19:25Z"
+      "deployed": "2026-03-09T02:18:06Z"
     }
   ],
-  "_last_deploy": "2026-03-07T01:30:56Z"
+  "_last_deploy": "2026-03-09T02:18:06Z"
 }

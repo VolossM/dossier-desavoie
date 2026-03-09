@@ -1926,6 +1926,8 @@ function evDotX(ev, ax) {
   }
   return ax._xStart + (ax._wPx || BAND_W);
 }
+
+function buildEvents_DOM(canvas) {
   // ── Passe 1 : calculer le X naturel et le Y naturel de chaque événement ──
   const items = []; // { ev, ax, xNat, yNat }
   for (const ev of EVENTS) {
