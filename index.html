@@ -350,19 +350,25 @@ body::before {
 }
 
 .co-band-label {
-  position: sticky;
-  top: 70px;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 2px;
   font-family: var(--font-mono);
-  font-size: 7.5px;
-  letter-spacing: 0.08em;
+  font-size: 6.5px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 3px 4px 0;
-  opacity: 0.75;
+  opacity: 0.70;
   cursor: default;
   user-select: none;
+  pointer-events: none;
   z-index: 5;
 }
 
@@ -1079,6 +1085,138 @@ body::before {
 #info-bar #inf-order-toggle:hover { color: #c8c4be; }
 #info-bar #inf-connect-toggle.active,
 #info-bar #inf-order-toggle.active { color: var(--amber); }
+
+/* ── Boutons zoom ── */
+#inf-zoom-block {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.inf-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--dust);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.12s, background 0.12s;
+  user-select: none;
+  font-family: var(--font-ui);
+}
+.inf-zoom-btn:hover { color: #c8c4be; background: rgba(255,255,255,0.12); }
+#inf-zoom-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--dust);
+  letter-spacing: 0.04em;
+  min-width: 32px;
+  text-align: center;
+  user-select: none;
+}
+@media (max-width: 768px) { #inf-zoom-block { display: none; } }
+
+/* ── Bouton légende dans le header ── */
+.hd-legend-btn {
+  background: none;
+  border: none;
+  border-left: 1px solid var(--ink3);
+  color: var(--dust2);
+  font-size: 17px;
+  cursor: pointer;
+  padding: 0 14px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+  user-select: none;
+}
+.hd-legend-btn:hover { background: rgba(255,255,255,0.04); color: #c8c4be; }
+.hd-legend-btn.active { color: var(--amber); }
+
+/* ── Panneau légende (overlay togglable) ── */
+#legend-panel {
+  position: fixed;
+  left: 56px;
+  top: 66px;
+  bottom: 28px;
+  width: 170px;
+  z-index: 150;
+  background: rgba(245, 244, 241, 0.97);
+  border-right: 1px solid var(--wire);
+  border-top: 1px solid var(--wire2);
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  padding: 10px 0 16px;
+  box-shadow: 4px 0 16px rgba(0,0,0,0.10);
+}
+#legend-panel.open { display: flex; }
+#legend-panel::-webkit-scrollbar { width: 3px; }
+#legend-panel::-webkit-scrollbar-thumb { background: var(--wire); border-radius: 2px; }
+
+.lgd-section {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 8px;
+  gap: 5px;
+}
+.lgd-section + .lgd-section { border-top: 1px solid var(--wire2); }
+.lgd-section-title {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dust);
+  margin-bottom: 5px;
+}
+.lgd-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  line-height: 1.3;
+}
+.lgd-entry:hover .lgd-lbl { opacity: 1; }
+.lgd-swatch {
+  width: 14px; height: 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.13);
+  flex-shrink: 0;
+}
+.lgd-swatch-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.lgd-lbl {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--ink2);
+  opacity: 0.82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 118px;
+}
+.lgd-sub {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--dust);
+  display: block;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 118px;
+}
 </style>
 </head>
 <body>
@@ -1120,6 +1258,7 @@ body::before {
   </div>
   <div class="hd-axes" id="hd-axes"></div>
   <div class="hd-meta">
+    <button id="hd-legend-btn" class="hd-legend-btn" title="Légende (axes · statuts · schémas)">≡</button>
     <div class="hd-badge" id="hd-badge">CONFIDENTIEL</div>
   </div>
 </header>
@@ -1136,6 +1275,9 @@ body::before {
     <!-- content injected by JS -->
   </div>
 </div>
+
+<!-- LÉGENDE (bas-gauche, fixe) -->
+<div id="legend-panel"></div>
 
 <!-- INFO BAR -->
 <div id="info-bar">
@@ -1163,6 +1305,12 @@ body::before {
     <svg id="inf-entropy-spark" width="60" height="16" viewBox="0 0 60 16"></svg>
     <input id="inf-scale-slider" type="range" min="0" max="100" value="50"
            title="Tension temporelle : glisser vers la gauche pour dilater le passé récent">
+  </span>
+  <span class="inf-sep">·</span>
+  <span id="inf-zoom-block">
+    <button class="inf-zoom-btn" id="inf-zoom-out" title="Dézoomer (Ctrl+↓)">−</button>
+    <span id="inf-zoom-label">100%</span>
+    <button class="inf-zoom-btn" id="inf-zoom-in" title="Zoomer (Ctrl+↑)">+</button>
   </span>
 </div>
 
@@ -1198,7 +1346,8 @@ let EPOCH_START    = new Date('1929-01-01');  // recalibré dynamiquement dans b
 const CANVAS_PAD_TOP    = 48;
 const CANVAS_PAD_BOTTOM = 80;
 const CANVAS_MIN_WIDTH  = 900;
-const CANVAS_FIXED_H    = 6200;  // hauteur fixe : l'échelle s'adapte, pas la hauteur
+const CANVAS_FIXED_H_BASE = 6200;  // hauteur de base (px) — CANVAS_FIXED_H = BASE × ZOOM
+let   CANVAS_FIXED_H      = 6200;  // hauteur courante (recalculée à chaque rebuild)
 
 // ── Mise en page des bandes de sociétés ──
 const BAND_W      = 16;   // largeur d'une lane de société (px)
@@ -1245,6 +1394,12 @@ let SCALE_T_OPT   = 1500;   // T optimal calculé après chargement
 let SCALE_D       = 1;      // durée totale en jours (calculée après chargement)
 const SCALE_T_MIN = 60;
 const SCALE_T_MAX = 30000;
+
+// ── Zoom temporel ──────────────────────────────────────────
+let ZOOM = 1.0;
+const ZOOM_MIN   = 0.4;
+const ZOOM_MAX   = 4.0;
+const ZOOM_STEPS = [0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0];
 
 function expScale(tDays) {
   // Normalise [0, SCALE_D] → [0, 1] selon courbe exponentielle
@@ -1426,7 +1581,12 @@ function computeLayout() {
   //    ax._xStart   : bord gauche de la zone de bandes pour cet axe
   //    ax._xPx      : centre de l'axe (milieu de la zone bandes) — ancrage des cartes sans société
   //    ax._wPx      : largeur totale de la zone de bandes
-  let cursor = AXIS_LEFT;
+  // ── Dimensions zoomées (ZOOM s'applique aux X seulement ; Y via CANVAS_FIXED_H) ──
+  const zBW = Math.max(8,  Math.round(BAND_W   * ZOOM));  // largeur bande
+  const zBG = Math.max(2,  Math.round(BAND_GAP * ZOOM));  // gap inter-lane
+  const zAG = Math.max(12, Math.round(AXIS_GAP * ZOOM));  // gap inter-axe
+  const zAL = Math.max(8,  Math.round(AXIS_LEFT * ZOOM)); // marge gauche
+  let cursor = zAL;
   const axIds = Object.keys(AXIS_MAP);
   for (let ai = 0; ai < axIds.length; ai++) {
     const ax  = AXIS_MAP[axIds[ai]];
@@ -1451,8 +1611,8 @@ function computeLayout() {
       laneEndStr[lane] = disStr || '9999-12-31';
 
       _companyLayout[co.id] = {
-        xPx:    cursor + lane * BAND_W + Math.floor(lane > 0 ? BAND_GAP * 0 : 0),
-        wPx:    BAND_W,
+        xPx:    cursor + lane * zBW,
+        wPx:    zBW,
         lane,
         axisId: ax.id,
         incStr,
@@ -1463,10 +1623,10 @@ function computeLayout() {
     }
 
     const nLanes = Math.max(1, laneEndStr.length);
-    ax._xPx  = cursor + Math.floor(nLanes * BAND_W / 2);
-    ax._wPx  = nLanes * BAND_W;
-    // Espace entre axes : BAND_GAP entre lanes, AXIS_GAP entre axes distincts
-    cursor  += nLanes * BAND_W + (ai < axIds.length - 1 ? AXIS_GAP : BAND_GAP);
+    ax._xPx  = cursor + Math.floor(nLanes * zBW / 2);
+    ax._wPx  = nLanes * zBW;
+    // Espace entre axes : zBG entre lanes, zAG entre axes distincts
+    cursor  += nLanes * zBW + (ai < axIds.length - 1 ? zAG : zBG);
   }
 
   // Recalculer CANVAS_WIDTH pour englober toutes les bandes + une carte à droite
@@ -1856,12 +2016,15 @@ function buildAxisRails(canvas) {
     band.style.borderTopColor = ax.color;
     if (layout.noStartDate) band.classList.add('no-start-date');
 
-    // Étiquette sticky
+    // Étiquette verticale : nom + forme sociale
     const label = document.createElement('div');
     label.className = 'co-band-label';
     label.style.color = ax.color;
-    label.title = p1(co, 'name') || coId;
-    label.textContent = (p1(co, 'name') || coId).slice(0, 20);
+    const coName = p1(co, 'name') || coId;
+    const coForm = p1(co, 'legalForm') || '';
+    const labelFull = coForm ? `${coName} · ${coForm}` : coName;
+    label.title = labelFull;
+    label.textContent = labelFull;
     band.appendChild(label);
 
     // Mandats (Directorship) dans cette société
@@ -2985,8 +3148,9 @@ function buildDensityHeatmap() {
   // Précalcul : pour chaque px Y, retrouver le temps en jours
   // via inversion numérique de expScale (par dichotomie)
   function yToDays(yPx) {
-    // Inverse expScale : trouver t tel que dateY(t) ≈ yPx
-    const target = (yPx - CANVAS_PAD_TOP) / usable; // [0,1]
+    // Normalise [0,1] depuis le bord PAD_TOP ; inversion si timeline retournée
+    let target = (yPx - CANVAS_PAD_TOP) / usable;
+    if (INVERT_TIMELINE) target = 1 - target;   // récent en haut → inverser
     if (target <= 0) return 0;
     if (target >= 1) return SCALE_D;
     if (SCALE_T > SCALE_D * 50) return target * SCALE_D; // linéaire
@@ -3039,6 +3203,176 @@ function syncYearSpine() {
   if (inner) inner.style.transform = `translateY(-${canvasEl.scrollTop}px)`;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ZOOM
+═══════════════════════════════════════════════════════════ */
+function updateZoomLabel() {
+  const el = document.getElementById('inf-zoom-label');
+  if (el) el.textContent = Math.round(ZOOM * 100) + '%';
+  // Griser les boutons aux limites
+  const btnOut = document.getElementById('inf-zoom-out');
+  const btnIn  = document.getElementById('inf-zoom-in');
+  if (btnOut) btnOut.style.opacity = ZOOM <= ZOOM_STEPS[0] + 0.001 ? '0.3' : '1';
+  if (btnIn)  btnIn.style.opacity  = ZOOM >= ZOOM_STEPS[ZOOM_STEPS.length-1] - 0.001 ? '0.3' : '1';
+}
+
+function stepZoom(direction) {
+  // direction: +1 (zoom in) ou -1 (zoom out)
+  const idx = ZOOM_STEPS.findIndex(z => Math.abs(z - ZOOM) < 0.001);
+  const cur = idx === -1 ? 4 : idx;
+  const nxt = Math.max(0, Math.min(ZOOM_STEPS.length - 1, cur + direction));
+  if (ZOOM_STEPS[nxt] === ZOOM) return;
+  ZOOM = ZOOM_STEPS[nxt];
+  rebuildCanvas();
+  updateZoomLabel();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PANNEAU LÉGENDE
+═══════════════════════════════════════════════════════════ */
+function buildLegendPanel() {
+  const panel = document.getElementById('legend-panel');
+  if (!panel) return;
+  panel.innerHTML = '';
+
+  // ── Section : axes narratifs ──
+  if (Object.keys(AXIS_MAP).length) {
+    const sec = document.createElement('div');
+    sec.className = 'lgd-section';
+    const title = document.createElement('div');
+    title.className = 'lgd-section-title';
+    title.textContent = 'Axes narratifs';
+    sec.appendChild(title);
+
+    for (const ax of Object.values(AXIS_MAP)) {
+      const entry = document.createElement('div');
+      entry.className = 'lgd-entry';
+      entry.title = ax.sublabel || ax.label;
+      const dot = document.createElement('div');
+      dot.className = 'lgd-swatch-dot';
+      dot.style.background = ax.color;
+      const txt = document.createElement('div');
+      const lbl = document.createElement('div');
+      lbl.className = 'lgd-lbl';
+      lbl.style.color = ax.color;
+      lbl.textContent = ax.label;
+      txt.appendChild(lbl);
+      if (ax.sublabel) {
+        const sub = document.createElement('span');
+        sub.className = 'lgd-sub';
+        sub.textContent = ax.sublabel;
+        txt.appendChild(sub);
+      }
+      entry.appendChild(dot);
+      entry.appendChild(txt);
+      sec.appendChild(entry);
+    }
+    panel.appendChild(sec);
+  }
+
+  // ── Section : statuts sociétés ──
+  {
+    const sec = document.createElement('div');
+    sec.className = 'lgd-section';
+    const title = document.createElement('div');
+    title.className = 'lgd-section-title';
+    title.textContent = 'Statuts';
+    sec.appendChild(title);
+
+    const STATUTS = [
+      ['active',   'Active'],
+      ['rj',       'Redressement judiciaire'],
+      ['lj',       'Liquidation judiciaire'],
+      ['insolvent','Cessation de paiements'],
+      ['dissolved','Dissoute / radiée'],
+      ['dormant',  'Dormante'],
+      ['default',  'Statut inconnu'],
+    ];
+    for (const [key, label] of STATUTS) {
+      const entry = document.createElement('div');
+      entry.className = 'lgd-entry';
+      const sw = document.createElement('div');
+      sw.className = 'lgd-swatch';
+      sw.style.background = STATUS_BG[key] || STATUS_BG.default;
+      const lbl = document.createElement('div');
+      lbl.className = 'lgd-lbl';
+      lbl.textContent = label;
+      entry.appendChild(sw);
+      entry.appendChild(lbl);
+      sec.appendChild(entry);
+    }
+    panel.appendChild(sec);
+  }
+
+  // ── Section : schémas FtM présents ──
+  {
+    const SCHEMA_ICON = {
+      Event:        '⬡',
+      Document:     '◻',
+      Directorship: '◈',
+      Payment:      '⊛',
+      Ownership:    '◉',
+      CourtCase:    '⚖',
+    };
+    const schemas = [...new Set(EVENTS.map(e => e.schema))];
+    if (schemas.length) {
+      const sec = document.createElement('div');
+      sec.className = 'lgd-section';
+      const title = document.createElement('div');
+      title.className = 'lgd-section-title';
+      title.textContent = 'Schémas FtM';
+      sec.appendChild(title);
+
+      for (const schema of schemas) {
+        const count = EVENTS.filter(e => e.schema === schema).length;
+        const entry = document.createElement('div');
+        entry.className = 'lgd-entry';
+        const icon = document.createElement('div');
+        icon.style.cssText = 'width:14px;text-align:center;font-size:11px;color:var(--dust2);flex-shrink:0;';
+        icon.textContent = SCHEMA_ICON[schema] || '○';
+        const lbl = document.createElement('div');
+        lbl.className = 'lgd-lbl';
+        lbl.textContent = `${schema} (${count})`;
+        entry.appendChild(icon);
+        entry.appendChild(lbl);
+        sec.appendChild(entry);
+      }
+      panel.appendChild(sec);
+    }
+  }
+
+  // ── Section : éléments visuels ──
+  {
+    const sec = document.createElement('div');
+    sec.className = 'lgd-section';
+    const title = document.createElement('div');
+    title.className = 'lgd-section-title';
+    title.textContent = 'Éléments visuels';
+    sec.appendChild(title);
+
+    const items = [
+      { icon: '●', label: 'Événement daté',      color: 'var(--dust2)' },
+      { icon: '▬', label: 'Mandat (dirigeant)',   color: 'var(--dust2)' },
+      { icon: '⚠', label: 'Alerte OSINT',         color: 'var(--red)' },
+      { icon: '◈', label: 'Connexion SVG',         color: 'var(--dust2)' },
+    ];
+    for (const it of items) {
+      const entry = document.createElement('div');
+      entry.className = 'lgd-entry';
+      const icon = document.createElement('div');
+      icon.style.cssText = `width:14px;text-align:center;font-size:11px;color:${it.color};flex-shrink:0;`;
+      icon.textContent = it.icon;
+      const lbl = document.createElement('div');
+      lbl.className = 'lgd-lbl';
+      lbl.textContent = it.label;
+      entry.appendChild(icon);
+      entry.appendChild(lbl);
+      sec.appendChild(entry);
+    }
+    panel.appendChild(sec);
+  }
+}
+
 scrollTrack.addEventListener('scroll', () => {
   if (_scrollSyncing) return;
   _scrollSyncing = true;
@@ -3055,9 +3389,58 @@ canvasEl.addEventListener('scroll', () => {
   _scrollSyncing = false;
 });
 
+// ── Zoom Ctrl+molette ──────────────────────────────────────
+let _zoomWheelTimer = null;
+canvasEl.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+
+  const oldZoom = ZOOM;
+  const idx = ZOOM_STEPS.findIndex(z => Math.abs(z - ZOOM) < 0.001);
+  const cur = idx === -1 ? ZOOM_STEPS.indexOf(1.0) : idx;
+  const delta = e.deltaY > 0 ? -1 : 1;
+  const nxt = Math.max(0, Math.min(ZOOM_STEPS.length - 1, cur + delta));
+  const newZoom = ZOOM_STEPS[nxt];
+  if (newZoom === ZOOM) return;
+
+  // Conserver le point de contenu sous le curseur après rebuild
+  const rect = canvasEl.getBoundingClientRect();
+  const mouseY = e.clientY - rect.top;
+  const oldScrollTop  = canvasEl.scrollTop;
+  const oldScrollLeft = canvasEl.scrollLeft;
+  const scaleRatio = newZoom / oldZoom;
+
+  ZOOM = newZoom;
+  updateZoomLabel();
+
+  // Rebuild différé pour éviter trop de reconstructions rapides
+  clearTimeout(_zoomWheelTimer);
+  _zoomWheelTimer = setTimeout(() => {
+    rebuildCanvas();
+    // Repositionner pour garder le point de contenu sous la souris
+    canvasEl.scrollTop  = (mouseY + oldScrollTop)  * scaleRatio - mouseY;
+    canvasEl.scrollLeft = (oldScrollLeft) * scaleRatio;
+  }, 80);
+}, { passive: false });
+
+// ── Boutons +/− ──────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inf-zoom-in')?.addEventListener('click',  () => stepZoom(+1));
+  document.getElementById('inf-zoom-out')?.addEventListener('click', () => stepZoom(-1));
+
+  // Toggle panneau légende
+  document.getElementById('hd-legend-btn')?.addEventListener('click', function() {
+    const panel = document.getElementById('legend-panel');
+    if (!panel) return;
+    panel.classList.toggle('open');
+    this.classList.toggle('active', panel.classList.contains('open'));
+  });
+});
+
 // ── Rebuild complet du canvas (bandes + événements + connecteurs + heatmap) ──
-// Appelé après tout changement de SCALE_T ou au resize.
+// Appelé après tout changement de SCALE_T, ZOOM ou au resize.
 function rebuildCanvas() {
+  CANVAS_FIXED_H = Math.round(CANVAS_FIXED_H_BASE * ZOOM);
   computeAxisPositions();
   const canvas = document.getElementById('canvas');
   canvas.innerHTML =
@@ -3084,6 +3467,7 @@ function rebuildCanvas() {
   buildConnectors(svg);
   buildDotConnectors(svg);
   buildDensityHeatmap();
+  buildLegendPanel();
   syncScrollTrackWidth();
 }
 
@@ -3133,6 +3517,10 @@ main().then(() => {
 
     updateScaleUI(curve, SCALE_T_OPT, SCALE_T, bestEnt);
   }
+
+  // Légende et zoom initial
+  buildLegendPanel();
+  updateZoomLabel();
 }).catch(console.error);
 </script>
 </body>
