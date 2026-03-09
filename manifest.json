@@ -2,7 +2,7 @@
   "_comment": "Manifest DeSavoie/Chicherit. Positions horizontales continues (0–1). anchor_entities sert au calcul d'affinité pour les événements sans axis explicite. dedup_strategy: merge = fusion des propriétés si même ID. Consolidation mars 2026 — v2 : axe Zimmermann ajouté en position centrale.",
   "dataset": "affaire-desavoie-chicherit",
   "title": "Affaire DeSavoie / Chicherit",
-  "subtitle": "Fraude obligataire €550 M — France · Suisse · Allemagne · Monaco · Dubaï · Indonésie · Espagne · 2005–2026",
+  "subtitle": "France · Suisse · Allemagne · Monaco · Dubaï · Indonésie · Espagne · 2005–2026",
   "classification": "Confidentiel — document de travail",
   "dedup_strategy": "merge",
   "axes": [
@@ -101,10 +101,10 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "a85dbd7e9103119057331cbe1fc036812f80f3d92be3e6c97ccbf9c6ed803d67",
-      "version": 30,
-      "size": 106636,
-      "deployed": "2026-03-09T02:18:06Z"
+      "sha256": "8d4d68615ff71237bf3037954b74b06d2e340656ff68898e329e5594d98674fe",
+      "version": 31,
+      "size": 113799,
+      "deployed": "2026-03-09T12:10:49Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
@@ -170,5 +170,5 @@
       "deployed": "2026-03-09T02:18:06Z"
     }
   ],
-  "_last_deploy": "2026-03-09T02:18:06Z"
+  "_last_deploy": "2026-03-09T12:10:49Z"
 }

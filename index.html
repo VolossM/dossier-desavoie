@@ -146,19 +146,23 @@ body::before {
   align-items: center;
   gap: 0;
   flex: 1;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
+.hd-axes::-webkit-scrollbar { display: none; }
 
 .hd-axis-pill {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 18px;
+  gap: 6px;
+  padding: 0 12px;
   height: 100%;
   border-right: 1px solid var(--ink3);
   cursor: pointer;
   transition: background 0.15s;
   user-select: none;
+  flex-shrink: 0;
 }
 .hd-axis-pill:hover { background: rgba(255,255,255,0.04); }
 .hd-axis-pill.muted { opacity: 0.35; }
@@ -1064,14 +1068,17 @@ body::before {
 }
 #info-bar .inf-sep { opacity: 0.3; }
 #info-bar #inf-event-count { color: #9db0c8; }
-#info-bar #inf-connect-toggle {
+#info-bar #inf-connect-toggle,
+#info-bar #inf-order-toggle {
   cursor: pointer;
   color: var(--dust);
   transition: color 0.15s;
   user-select: none;
 }
-#info-bar #inf-connect-toggle:hover { color: #c8c4be; }
-#info-bar #inf-connect-toggle.active { color: var(--amber); }
+#info-bar #inf-connect-toggle:hover,
+#info-bar #inf-order-toggle:hover { color: #c8c4be; }
+#info-bar #inf-connect-toggle.active,
+#info-bar #inf-order-toggle.active { color: var(--amber); }
 </style>
 </head>
 <body>
@@ -1139,6 +1146,8 @@ body::before {
   <span id="inf-file-count">—</span>
   <span class="inf-sep">·</span>
   <span id="inf-connect-toggle" title="Afficher/masquer les connexions entre entités liées">Connexions : OFF</span>
+  <span class="inf-sep">·</span>
+  <span id="inf-order-toggle" title="Inverser le sens de la frise" style="cursor:pointer">↑ Récent en haut</span>
   <span class="inf-sep">·</span>
   <span id="inf-integrity" title="Cliquer pour détail intégrité des fichiers" style="cursor:pointer">Intégrité : —</span>
   <span class="inf-sep">·</span>
@@ -1262,6 +1271,7 @@ let MUTED_AXES = new Set();
 let SHOW_CONNECTORS = false;
 let CANVAS_WIDTH = 0;
 let CANVAS_HEIGHT = 0;
+let INVERT_TIMELINE = true;   // true = plus récent en haut (défaut)
 let _uboIndex = null; // { byCompany: Map<coId,[{uboId,pct,estimated}]>, byUbo: Map<uboId,[{coId,pct,estimated}]> }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1289,7 +1299,8 @@ function dateY(dateStr) {
   if (!d) return CANVAS_PAD_TOP;
   const t = daysSinceEpoch(d);
   const usable = CANVAS_FIXED_H - CANVAS_PAD_TOP - CANVAS_PAD_BOTTOM;
-  return Math.round(CANVAS_PAD_TOP + expScale(t) * usable);
+  const raw = Math.round(CANVAS_PAD_TOP + expScale(t) * usable);
+  return INVERT_TIMELINE ? (CANVAS_FIXED_H - raw) : raw;
 }
 
 function formatDate(s) {
@@ -1480,29 +1491,37 @@ function resolveLayoutY() {
   for (const [coId, layout] of Object.entries(_companyLayout)) {
     const inc = layout.incStr;
 
-    // Deux cas pour yStart :
-    // A) Date connue (quelle que soit l'ancienneté) → position exacte sur l'échelle exp.
-    // B) Pas de date → fallback sur premier événement référençant ; sinon sommet, marqué.
-    let yStart;
+    // Calcul du Y d'incorporation (ou fallback)
+    let yInc;
     let noStartDate = false;
 
     if (inc) {
-      yStart = dateY(inc);
+      yInc = dateY(inc);
     } else {
       const fallback = firstRefDate[coId];
       if (fallback) {
-        yStart = dateY(fallback);
+        yInc = dateY(fallback);
       } else {
-        // Aucune date connue et aucun événement référent : placer en bas de frise
-        // (zone contemporaine) plutôt qu'au sommet (~1929) pour éviter l'accumulation.
-        yStart = CANVAS_HEIGHT - CANVAS_PAD_BOTTOM - 80;
+        // Aucune date connue : zone contemporaine.
+        // Sans inversion : bas (CANVAS_HEIGHT - pad). Avec inversion : haut (pad).
+        yInc = INVERT_TIMELINE
+          ? CANVAS_PAD_TOP + 80
+          : CANVAS_HEIGHT - CANVAS_PAD_BOTTOM - 80;
       }
       noStartDate = true;
     }
 
-    layout.yStart      = yStart;
+    // Calcul du Y de dissolution (ou extension jusqu'au présent/bord de la frise)
+    // Sans inversion : pas de dissolution → CANVAS_HEIGHT (bas = présent).
+    // Avec inversion : pas de dissolution → CANVAS_PAD_TOP (haut = présent).
+    const yDis = layout.disStr
+      ? dateY(layout.disStr)
+      : (INVERT_TIMELINE ? CANVAS_PAD_TOP : CANVAS_HEIGHT);
+
+    // yStart = bord supérieur (plus petit Y), yEnd = bord inférieur (plus grand Y)
+    layout.yStart      = Math.min(yInc, yDis);
+    layout.yEnd        = Math.max(yInc, yDis);
     layout.noStartDate = noStartDate;
-    layout.yEnd        = layout.disStr ? dateY(layout.disStr) : CANVAS_HEIGHT;
 
     // Hauteur minimale de 60px pour que la bande soit toujours visible
     if (layout.yEnd - layout.yStart < 60) layout.yEnd = layout.yStart + 60;
@@ -1618,10 +1637,21 @@ function buildYearSpine() {
     return STEPS.find(s => s >= rawStep) ?? STEPS[STEPS.length - 1];
   }
 
-  for (let y = firstYear; y <= lastYear; y++) {
-    const yY     = dateY(`${y}-01-01`);
-    const yNext  = Math.min(CANVAS_FIXED_H, dateY(`${y+1}-01-01`));
-    const height = Math.max(0, yNext - yY);
+  // Avec INVERT_TIMELINE, les années récentes sont en haut :
+  // on itère de lastYear vers firstYear pour que le DOM reflète l'ordre visuel.
+  const yStart = INVERT_TIMELINE ? lastYear  : firstYear;
+  const yEnd   = INVERT_TIMELINE ? firstYear : lastYear;
+  const yStep  = INVERT_TIMELINE ? -1 : 1;
+
+  for (let y = yStart; INVERT_TIMELINE ? y >= yEnd : y <= yEnd; y += yStep) {
+    // Avec inversion : bloc pour l'année y s'étend de dateY(y+1) (haut) à dateY(y) (bas)
+    const yTop = INVERT_TIMELINE
+      ? Math.min(CANVAS_FIXED_H - CANVAS_PAD_BOTTOM, dateY(`${y+1}-01-01`))
+      : dateY(`${y}-01-01`);
+    const yBot = INVERT_TIMELINE
+      ? dateY(`${y}-01-01`)
+      : Math.min(CANVAS_FIXED_H, dateY(`${y+1}-01-01`));
+    const height = Math.max(0, yBot - yTop);
 
     const block = document.createElement('div');
     block.className = 'yr-block';
@@ -1935,11 +1965,10 @@ function buildEvents_DOM(canvas) {
     if (!ax) continue;
 
     const yNat = dateY(eventDate(ev));
-    // Ancrage X : bord droit de la zone de bandes de l'axe + CARD_OFFSET.
-    // L'ancrage per-company (xPx + wPx + CARD_OFFSET) est incorrect car les bandes
-    // sont contiguës — le point atterrirait à l'intérieur de la bande adjacente.
-    // Toutes les cartes d'un axe s'alignent en une colonne à droite du bloc de bandes.
-    const xNat = ax._xStart + (ax._wPx || BAND_W) + CARD_OFFSET;
+    // Ancrage X : bord droit de la bande de la société référencée (= position du dot)
+    // + CARD_OFFSET. Chaque événement s'aligne sur sa propre société, non sur l'axe.
+    const xDotNat = evDotX(ev, ax);
+    const xNat = xDotNat + CARD_OFFSET;
     items.push({ ev, ax, xNat: Math.round(xNat), yNat });
   }
 
@@ -1993,10 +2022,12 @@ function buildEvents_DOM(canvas) {
     const endDate = eventEndDate(ev);
     if (endDate) {
       const yEnd = dateY(endDate);
+      const segTop = Math.min(yNat, yEnd) - yNat; // relatif au dotNode
+      const segH   = Math.abs(yEnd - yNat);
       const seg = document.createElement('div');
       seg.className = 'ev-segment';
-      seg.style.top    = '0px';
-      seg.style.height = (yEnd - yNat) + 'px';
+      seg.style.top    = segTop + 'px';
+      seg.style.height = segH + 'px';
       seg.style.background = ax.color;
       dotNode.appendChild(seg);
     }
@@ -2505,6 +2536,13 @@ document.getElementById('inf-connect-toggle').addEventListener('click', function
   setConnectorsVisible(SHOW_CONNECTORS);
 });
 
+document.getElementById('inf-order-toggle').addEventListener('click', function() {
+  INVERT_TIMELINE = !INVERT_TIMELINE;
+  this.textContent = INVERT_TIMELINE ? '↑ Récent en haut' : '↓ Ancien en haut';
+  this.classList.toggle('active', !INVERT_TIMELINE);
+  rebuildCanvas();
+});
+
 /* ═══════════════════════════════════════════════════════════
    ESCAPE
 ═══════════════════════════════════════════════════════════ */
@@ -2795,7 +2833,15 @@ async function main() {
   canvas.style.position = 'relative';
 
   buildYearSpine();  // fixe CANVAS_HEIGHT et SCALE_D
-  canvas.style.height = CANVAS_HEIGHT + 'px';
+  // Ne pas écraser la hauteur CSS (flex:1, height:100%) — le spacer assure le scrollable
+  let spacer = document.getElementById('canvas-spacer');
+  if (!spacer) {
+    spacer = document.createElement('div');
+    spacer.id = 'canvas-spacer';
+    spacer.style.cssText = 'position:relative;pointer-events:none;flex-shrink:0;';
+    canvas.appendChild(spacer);
+  }
+  spacer.style.height = CANVAS_HEIGHT + 'px';
   buildAxisRails(canvas);
   buildHeaderAxes();
   buildEvents_DOM(canvas);
@@ -3019,7 +3065,15 @@ function rebuildCanvas() {
     '<svg id="connector-svg" xmlns="http://www.w3.org/2000/svg"></svg>';
   canvas.style.width  = CANVAS_WIDTH + 'px';
   buildYearSpine();               // recalibre SCALE_D et CANVAS_HEIGHT
-  canvas.style.height = CANVAS_HEIGHT + 'px';
+  // Spacer pour rendre le canvas scrollable sans écraser height:100% du flex
+  let spacer = document.getElementById('canvas-spacer');
+  if (!spacer) {
+    spacer = document.createElement('div');
+    spacer.id = 'canvas-spacer';
+    spacer.style.cssText = 'position:relative;pointer-events:none;flex-shrink:0;';
+    canvas.appendChild(spacer);
+  }
+  spacer.style.height = CANVAS_HEIGHT + 'px';
   buildAxisRails(canvas);         // bandes sociétés (resolveLayoutY ici)
   buildHeaderAxes();
   buildEvents_DOM(canvas);
