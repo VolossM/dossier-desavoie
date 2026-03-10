@@ -479,6 +479,53 @@ body::before {
 }
 
 /* ═══════════════════════════════════════════
+   HACHURES PROCÉDURALES (DDC / Relevé forclusion / Appel)
+   Superposées sur la bande société, pointer-events:none.
+   z-index 9 : au-dessus de co-band(8), sous dots/cartes(25).
+═══════════════════════════════════════════ */
+.proc-hatch {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  border-radius: 0;
+  z-index: 9;
+}
+/* ── 2 premiers mois : déclaration des créances ── hachures rouges épaisses 45° */
+.proc-hatch-ddc {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(210, 40, 40, 0.42) 0px,
+    rgba(210, 40, 40, 0.42) 3px,
+    transparent           3px,
+    transparent           9px
+  );
+}
+/* ── Mois 3–6 : relevé de forclusion ── hachures oranges épaisses -45° (alternées) */
+.proc-hatch-forc {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(220, 120, 20, 0.42) 0px,
+    rgba(220, 120, 20, 0.42) 3px,
+    transparent             3px,
+    transparent             9px
+  );
+}
+/* ── Superposé sur toute la plage 6 mois : délai appel liste créances ──
+   hachures noires fines, direction perpendiculaire (135°) */
+.proc-hatch-appel {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(10, 10, 10, 0.10) 0px,
+    rgba(10, 10, 10, 0.10) 1px,
+    transparent            1px,
+    transparent            5px
+  );
+  z-index: 10; /* légèrement au-dessus de ddc et forc */
+}
+/* Tooltip des hachures — visible au hover de la bande sous-jacente */
+.proc-hatch[title]:hover { cursor: default; }
+
+/* ═══════════════════════════════════════════
    EVENT CARDS
 ═══════════════════════════════════════════ */
 .ev-anchor {
@@ -498,16 +545,16 @@ body::before {
   pointer-events: none; /* les événements sont capturés par .ev-dot enfant */
 }
 
-/* Étiquette date à gauche du dot — ancrée sur l'anchor (yFinal+DOT_R),
-   pas sur le dotNode (yNat), pour s'aligner sur la carte décompressée */
+/* Étiquette date à gauche du dot — ancrée sur l'anchor.
+   anchor.top = yFinal + DOT_R - CARD_TITLE_HALF_H  (décalé vers le haut de la moitié du titre).
+   Pour que l'étiquette reste alignée sur le centre du dot :
+     translateY = CARD_TITLE_HALF_H - 50% de sa propre hauteur
+   var(--title-half) est positionné par JS sur chaque anchor. */
 .ev-dot-label {
   position: absolute;
   left: 0;
   top: 0;
-  /* anchor.top = yFinal + DOT_R = centre vertical du dot côté carte.
-     translateX : à gauche du dot (bord gauche du dot = left - DOT_R).
-     translateY(-50%) : centré verticalement sur le centre du dot. */
-  transform: translate(calc(-100% - var(--dot-r) - 5px), -50%);
+  transform: translate(calc(-100% - var(--dot-r) - 5px), calc(var(--title-half, 9px) - 50%));
   font-family: var(--font-mono);
   font-size: 7.5px;
   font-weight: 600;
@@ -1475,6 +1522,9 @@ const AXIS_LEFT   = 32;   // marge gauche du canvas
 const CARD_EST_H  = 90;   // hauteur estimée d'une carte complète (px, premier passage)
 const PEEK_H      = 40;   // hauteur minimale visible d'une carte compressée
 const PEEK_GAP    = 4;    // écart supplémentaire entre cartes compressées
+// Moitié de la hauteur de la première ligne du titre (font-size 13.5px × line-height 1.3 / 2).
+// Sert à décaler la carte vers le haut pour que la première ligne du titre soit centrée sur le dot.
+const CARD_TITLE_HALF_H = Math.round(13.5 * 1.3 / 2); // ≈ 9 px
 
 // Couleur de fond par statut
 const STATUS_BG = {
@@ -1585,6 +1635,16 @@ function formatDate(s) {
   if (d && m) return `${d} ${m} ${y}`;
   if (m) return `${m} ${y}`;
   return y;
+}
+
+// Retourne une chaîne ISO YYYY-MM-DD décalée de n mois (n peut être ≤ 0)
+function addMonths(dateStr, n) {
+  const d = parseDate((dateStr || '').trim().replace(/^[<>]/, ''));
+  if (!d) return null;
+  d.setMonth(d.getMonth() + n);
+  return d.getFullYear() + '-'
+       + String(d.getMonth() + 1).padStart(2, '0') + '-'
+       + String(d.getDate()).padStart(2, '0');
 }
 
 function formatAmount(raw, currency) {
@@ -2095,6 +2155,91 @@ function _moveBandTooltip(e) {
   tooltip.style.top  = y + 'px';
 }
 
+/* ═══════════════════════════════════════════════════════════
+   HACHURES PROCÉDURALES — RJ / LJ
+   Superpose trois couches de hachures sur la bande de chaque société
+   ayant fait l'objet d'un RJ ou d'une LJ :
+   ① Rouge épais (45°)  — 2 premiers mois depuis publication BODACC
+       → délai déclaration des créances (art. L. 622-24 C. com.)
+   ② Orange épais (-45°) — mois 3 à 6 depuis le jugement d'ouverture
+       → délai relevé de forclusion (art. L. 622-26 C. com.)
+   ③ Noir fin (135°, superposé) — toute la plage de 6 mois
+       → rappel du délai d'appel de la liste des créances (art. L. 624-3)
+       La date de la liste définitive n'étant pas disponible dans les données,
+       la plage de 6 mois sert de proxy conservateur.
+═══════════════════════════════════════════════════════════ */
+function buildProcedureHatching(canvas) {
+  const RJ_KWD = /redressement judiciaire/i;
+  const LJ_KWD = /liquidation judiciaire/i;
+
+  // Supprimer les hachures précédentes (rebuild)
+  canvas.querySelectorAll('.proc-hatch').forEach(el => el.remove());
+
+  for (const ev of EVENTS) {
+    // Détecter le type d'événement dans le nom et/ou la description
+    const nameArr = pAll(ev, 'name');
+    const descArr = pAll(ev, 'description');
+    const searchText = [...nameArr, ...descArr].join(' ');
+    const isRJ = RJ_KWD.test(searchText);
+    const isLJ = LJ_KWD.test(searchText);
+    if (!isRJ && !isLJ) continue;
+
+    const evDate = eventDate(ev);
+    if (!evDate) continue;
+
+    const coIds = pAll(ev, 'ftmRef');
+    if (!coIds.length) continue;
+
+    // Dates-clés
+    const dateM2  = addMonths(evDate, 2);   // fin délai DDC
+    const dateM6  = addMonths(evDate, 6);   // fin délai relevé forclusion
+
+    for (const coId of coIds) {
+      const layout = _companyLayout[coId];
+      if (!layout) continue;
+
+      // Coordonnées Y canvas pour chaque borne (dateY gère l'inversion)
+      const yEv  = dateY(evDate);
+      const yM2  = dateY(dateM2);
+      const yM6  = dateY(dateM6);
+
+      // Avec INVERT_TIMELINE : plus récent = Y plus petit (haut)
+      // → "après" dans le temps = Y plus petit
+      const ddcTop  = Math.min(yEv, yM2);
+      const ddcBot  = Math.max(yEv, yM2);
+      const forcTop = Math.min(yM2, yM6);
+      const forcBot = Math.max(yM2, yM6);
+      const appTop  = Math.min(yEv, yM6);
+      const appBot  = Math.max(yEv, yM6);
+
+      const { xPx, wPx, yStart: bandTop, yEnd: bandBot } = layout;
+
+      // Helper : crée un div hachure clipé aux limites de la bande
+      const makeHatch = (rawTop, rawBot, cls, titleStr) => {
+        const t = Math.max(bandTop, Math.min(bandBot, rawTop));
+        const b = Math.max(bandTop, Math.min(bandBot, rawBot));
+        if (b - t < 2) return; // zone invisible ou nulle
+        const el = document.createElement('div');
+        el.className = `proc-hatch ${cls}`;
+        el.style.left   = xPx + 'px';
+        el.style.top    = t + 'px';
+        el.style.width  = wPx + 'px';
+        el.style.height = (b - t) + 'px';
+        el.title = titleStr;
+        canvas.appendChild(el);
+      };
+
+      const typeLabel = isLJ ? 'LJ' : 'RJ';
+      makeHatch(ddcTop, ddcBot,  'proc-hatch-ddc',
+        `${typeLabel} – ${formatDate(evDate)} : déclaration des créances, délai 2 mois (art. L. 622-24)`);
+      makeHatch(forcTop, forcBot, 'proc-hatch-forc',
+        `${typeLabel} – ${formatDate(evDate)} : relevé de forclusion, mois 3–6 (art. L. 622-26)`);
+      makeHatch(appTop,  appBot,  'proc-hatch-appel',
+        `${typeLabel} – ${formatDate(evDate)} : appel liste des créances, 1 mois depuis publication BODACC (art. L. 624-3)`);
+    }
+  }
+}
+
 function buildAxisRails(canvas) {
   // Passe 2 : résolution des coordonnées Y (SCALE_D est maintenant calibré)
   resolveLayoutY();
@@ -2401,11 +2546,15 @@ function buildEvents_DOM(canvas) {
     anchor.setAttribute('data-dot-y', yNat);
     if (coIds) anchor.dataset.coIds = coIds;
     anchor.style.left = xDot + 'px';
-    anchor.style.top  = (yFinal + DOT_R) + 'px';
+    anchor.style.top  = (yFinal + DOT_R - CARD_TITLE_HALF_H) + 'px';
 
     // ── Label date à gauche du dot, ancré sur l'anchor ──
-    // anchor.top = yFinal + DOT_R = centre vertical du dot côté carte.
-    // translateY(-50%) centre l'étiquette sur ce point.
+    // anchor.top = yFinal + DOT_R - CARD_TITLE_HALF_H.
+    // Le translateY(-50%) de .ev-dot-label le centre sur (anchor.top + 0) = yFinal+DOT_R-TITLE_HALF
+    // → décaler la date pour qu'elle reste alignée sur le centre du dot :
+    //   on a besoin qu'elle soit à anchor.top + CARD_TITLE_HALF_H = yFinal+DOT_R (centre du dot).
+    // On passe CARD_TITLE_HALF_H en custom property sur l'anchor pour le CSS.
+    anchor.style.setProperty('--title-half', CARD_TITLE_HALF_H + 'px');
     if (dateStr) {
       const dateLabel = document.createElement('div');
       dateLabel.className = 'ev-dot-label';
@@ -2543,11 +2692,12 @@ function buildDotConnectors(svg) {
     const yCard = parseFloat(anchor.style.top);
 
     // Origine du trait : centre du dot (xDot, yDot + DOT_R)
-    // Destination : coin haut-gauche de l'anchor (xCard, yCard) = (xDot, yFinal + DOT_R)
-    // Pour un événement non empilé : yCard = yDot + DOT_R → trait de longueur nulle → skip.
-    const x1 = xDot,        y1 = yDot + DOT_R;
-    const x2 = xCard,       y2 = yCard;
-    // Ne pas tracer de trait si les deux extrémités coïncident (non empilé ou sans company band)
+    // Destination : centre de la première ligne du titre = anchor.top + CARD_TITLE_HALF_H
+    //   → yCard + CARD_TITLE_HALF_H = (yFinal + DOT_R - CARD_TITLE_HALF_H) + CARD_TITLE_HALF_H
+    //   = yFinal + DOT_R (= centre du dot hors empilement → trait nul → skip)
+    const x1 = xDot,                          y1 = yDot + DOT_R;
+    const x2 = xCard,                         y2 = yCard + CARD_TITLE_HALF_H;
+    // Skip si trait de longueur nulle (événement non empilé)
     if (Math.abs(x1 - x2) < 2 && Math.abs(y1 - y2) < 2) continue;
 
     const evId = anchor.id.replace(/^ev-/, '');
@@ -3205,6 +3355,7 @@ async function main() {
   }
   spacer.style.height = CANVAS_HEIGHT + 'px';
   buildAxisRails(canvas);
+  buildProcedureHatching(canvas); // hachures DDC / forclusion / appel
   buildHeaderAxes();
   buildEvents_DOM(canvas);
   buildSchemaFilters();
@@ -3704,6 +3855,7 @@ function rebuildCanvas() {
   }
   spacer.style.height = CANVAS_HEIGHT + 'px';
   buildAxisRails(canvas);         // bandes sociétés (resolveLayoutY ici)
+  buildProcedureHatching(canvas); // hachures DDC / forclusion / appel
   buildHeaderAxes();
   buildEvents_DOM(canvas);
   buildSchemaFilters();
