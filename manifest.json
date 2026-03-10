@@ -128,10 +128,10 @@
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "fa825e9e0fcc11d3e89bd1f03a8e2ee9bfdd01f2c91bb3bdad8b28339d46a919",
-      "version": 28,
-      "size": 48487,
-      "deployed": "2026-03-10T11:47:46Z"
+      "sha256": "1071a873277d0398f3d0049e321861bd5a9aeb1c6fbae30e246b6ebc6e51e78d",
+      "version": 29,
+      "size": 47823,
+      "deployed": "2026-03-10T17:51:19Z"
     },
     {
       "path": "data/espagne.ftm.jsonl",
@@ -170,5 +170,5 @@
       "deployed": "2026-03-10T11:47:46Z"
     }
   ],
-  "_last_deploy": "2026-03-10T14:51:32Z"
+  "_last_deploy": "2026-03-10T17:51:19Z"
 }

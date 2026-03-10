@@ -414,7 +414,11 @@ body::before {
 
 .co-band-label {
   position: absolute;
-  inset: 0;
+  /* top est mis à jour dynamiquement via --label-offset pour rester visible au scroll */
+  top: var(--label-offset, 0px);
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -658,7 +662,7 @@ body::before {
   background: #fff;
   border: 1px solid var(--wire);
   border-radius: 4px;
-  padding: 0 12px 9px; /* padding-top = 0 : coin haut-gauche aligné au centre du dot */
+  padding: 0 0 0; /* aucun padding : coin haut-gauche sur le centre du dot, flush right+bottom */
   box-shadow: 0 2px 12px rgba(10,11,13,0.07), 0 1px 3px rgba(10,11,13,0.04);
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.2s var(--ease-out), opacity 0.15s;
@@ -677,6 +681,7 @@ body::before {
 }
 .ev-card.right { left: calc(var(--dot-r) + 4px); }
 
+/* Padding interne : uniquement left, et un léger top sur le titre */
 .ev-card-title {
   font-family: var(--font-display);
   font-size: 13.5px;
@@ -684,6 +689,7 @@ body::before {
   line-height: 1.3;
   color: var(--ink);
   margin-bottom: 2px;
+  padding-left: 7px;
 }
 .ev-card-date {
   font-family: var(--font-mono);
@@ -692,6 +698,7 @@ body::before {
   text-transform: uppercase;
   color: var(--dust);
   margin-bottom: 4px;
+  padding-left: 7px;
 }
 .ev-card-desc {
   font-size: 11px;
@@ -701,6 +708,7 @@ body::before {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  padding-left: 7px;
 }
 .ev-card-amount {
   font-family: var(--font-mono);
@@ -708,6 +716,7 @@ body::before {
   font-weight: 600;
   display: block;
   margin-top: 5px;
+  padding-left: 7px;
 }
 .ev-card-schema {
   font-family: var(--font-mono);
@@ -717,6 +726,7 @@ body::before {
   color: var(--dust);
   margin-top: 5px;
   opacity: 0.7;
+  padding-left: 7px;
 }
 .ev-card-source {
   display: flex;
@@ -813,6 +823,19 @@ body::before {
 .dot-card-line.highlighted {
   stroke-opacity: 0.75;
   stroke-dasharray: none;
+}
+
+/* ── Ligne CDP personne (traversant toute la frise) ── */
+.person-cdp-line {
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  fill: none;
+  stroke-opacity: 0.55;
+}
+.person-cdp-line:hover {
+  stroke-opacity: 0.9;
+  stroke-width: 2.5;
+  cursor: pointer;
 }
 
 /* ═══════════════════════════════════════════
@@ -1674,7 +1697,36 @@ function eventEndDate(e) {
   return p1(e,'endDate') || p1(e,'dissolutionDate') || null;
 }
 function eventName(e) {
-  return p1(e,'name') || p1(e,'fileName') || p1(e,'eventLabel') || e.schema;
+  const explicit = p1(e,'name') || p1(e,'fileName') || p1(e,'eventLabel');
+  if (explicit) return explicit;
+
+  // Générer un titre synthétique pour Directorship et Ownership sans name explicite
+  if (e.schema === 'Directorship') {
+    const dirId  = p1(e,'director') || p1(e,'person');
+    const orgId  = p1(e,'organization');
+    const role   = p1(e,'role');
+    const dir    = dirId  ? (p1(ENTITIES[dirId],  'name') || dirId)  : null;
+    const org    = orgId  ? (p1(ENTITIES[orgId],  'name') || orgId)  : null;
+    const end    = p1(e,  'endDate');
+    const label  = role ? role : (end ? 'Ex-dirigeant' : 'Dirigeant');
+    if (dir && org) return `${label} : ${dir} → ${org}`;
+    if (dir) return `${label} : ${dir}`;
+    if (org) return `${label} : ${org}`;
+    return 'Mandat';
+  }
+  if (e.schema === 'Ownership') {
+    const ownerId = p1(e,'owner');
+    const assetId = p1(e,'asset');
+    const pct     = p1(e,'percentage');
+    const owner   = ownerId ? (p1(ENTITIES[ownerId], 'name') || ownerId) : null;
+    const asset   = assetId ? (p1(ENTITIES[assetId], 'name') || assetId) : null;
+    const pctStr  = pct ? ` (${pct}%)` : '';
+    if (owner && asset) return `Participation : ${owner} → ${asset}${pctStr}`;
+    if (owner) return `Participation : ${owner}${pctStr}`;
+    if (asset) return `Participation → ${asset}${pctStr}`;
+    return 'Participation';
+  }
+  return e.schema;
 }
 function eventDesc(e) {
   return p1(e,'description') || p1(e,'text') || null;
@@ -2240,9 +2292,74 @@ function buildProcedureHatching(canvas) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   INDEX CDP — cessation des paiements par société
+   Construit un map coId → dateISO (date la plus précise connue,
+   ou estimée à -18 mois du jugement d'ouverture si absente).
+═══════════════════════════════════════════════════════════ */
+function buildCdpIndex() {
+  const CDP_KWD  = /cessation des paiements/i;
+  const RJ_KWD   = /redressement judiciaire/i;
+  const LJ_KWD   = /liquidation judiciaire/i;
+
+  // 1. Collecter les CDP explicites : coId → date (prioriser la plus ancienne)
+  const cdpByCompany = {};  // coId → ISO string (date CDP explicite)
+  const rjljByCompany = {}; // coId → ISO string (date premier jugement RJ ou LJ)
+
+  for (const ev of EVENTS) {
+    const nameArr = pAll(ev, 'name');
+    const descArr = pAll(ev, 'description');
+    const text    = [...nameArr, ...descArr].join(' ');
+    const evDate  = eventDate(ev);
+    if (!evDate) continue;
+
+    const refs = pAll(ev, 'ftmRef');
+    // Filtrer seulement les coIds (sociétés)
+    const coRefs = refs.filter(id => {
+      const ent = ENTITIES[id];
+      return ent && (ent.schema === 'Company' || ent.schema === 'LegalEntity');
+    });
+    if (!coRefs.length) continue;
+
+    if (CDP_KWD.test(text)) {
+      for (const coId of coRefs) {
+        // Prioriser la plus ancienne CDP
+        if (!cdpByCompany[coId] || evDate < cdpByCompany[coId]) {
+          cdpByCompany[coId] = evDate;
+        }
+      }
+    }
+    if (RJ_KWD.test(text) || LJ_KWD.test(text)) {
+      for (const coId of coRefs) {
+        // Garder le premier jugement d'ouverture (le plus ancien RJ ou LJ)
+        if (!rjljByCompany[coId] || evDate < rjljByCompany[coId]) {
+          rjljByCompany[coId] = evDate;
+        }
+      }
+    }
+  }
+
+  // 2. Pour les sociétés sans CDP explicite mais avec RJ/LJ :
+  //    remonter de 18 mois depuis le premier jugement d'ouverture (art. L. 631-8 C. com.)
+  const result = {}; // coId → { cdpDate, estimated }
+  const allCos = new Set([...Object.keys(cdpByCompany), ...Object.keys(rjljByCompany)]);
+  for (const coId of allCos) {
+    if (cdpByCompany[coId]) {
+      result[coId] = { cdpDate: cdpByCompany[coId], estimated: false };
+    } else if (rjljByCompany[coId]) {
+      const est = addMonths(rjljByCompany[coId], -18);
+      if (est) result[coId] = { cdpDate: est, estimated: true };
+    }
+  }
+  return result;
+}
+
 function buildAxisRails(canvas) {
   // Passe 2 : résolution des coordonnées Y (SCALE_D est maintenant calibré)
   resolveLayoutY();
+
+  // Index CDP : construit une fois par rebuild
+  const cdpIndex = buildCdpIndex();
 
   // ── Zones de fond par axe narratif ──
   for (const ax of Object.values(AXIS_MAP)) {
@@ -2393,6 +2510,42 @@ function buildAxisRails(canvas) {
     });
 
     canvas.appendChild(band);
+
+    // ── Fond jaune CDP sur la bande ──
+    // Si la société a une CDP (explicite ou estimée à -18 mois du jugement),
+    // colorier le fond en jaune entre la CDP et le jugement d'ouverture (ou bord de la bande).
+    const cdpInfo = cdpIndex[coId];
+    if (cdpInfo) {
+      const yCdp   = dateY(cdpInfo.cdpDate);
+      // Le haut de la plage jaune = bord supérieur de la bande (min y = plus récent si inversé)
+      // Plage jaune : entre CDP et la borne supérieure de la bande (= jugement d'ouverture ou
+      // simplement le bord de la bande si pas de jugement explicite dans les données).
+      const yTop   = Math.min(yCdp, layout.yStart);
+      const yBot   = Math.max(yCdp, layout.yStart);
+      const cdpH   = Math.max(0, yBot - yTop);
+      if (cdpH > 1) {
+        const cdpZone = document.createElement('div');
+        cdpZone.className = 'cdp-zone';
+        cdpZone.style.cssText = [
+          `position:absolute`,
+          `left:${layout.xPx}px`,
+          `top:${yTop}px`,
+          `width:${layout.wPx}px`,
+          `height:${cdpH}px`,
+          `background:${cdpInfo.estimated
+            ? 'repeating-linear-gradient(90deg,rgba(255,210,50,0.28)0px,rgba(255,210,50,0.28)4px,rgba(255,243,150,0.18)4px,rgba(255,243,150,0.18)8px)'
+            : 'rgba(255,220,40,0.38)'}`,
+          `pointer-events:none`,
+          `z-index:9`,
+          `box-sizing:border-box`,
+          `border:none`,
+        ].join(';');
+        cdpZone.title = cdpInfo.estimated
+          ? `CDP estimée ≥ ${formatDate(cdpInfo.cdpDate)} (max 18 mois avant jugement, art. L. 631-8 C. com.)`
+          : `CDP fixée au ${formatDate(cdpInfo.cdpDate)} (art. L. 631-8 C. com.)`;
+        canvas.appendChild(cdpZone);
+      }
+    }
   }
 }
 
@@ -2582,30 +2735,7 @@ function buildEvents_DOM(canvas) {
       <div class="ev-card-schema">${ev.schema}</div>
     `;
 
-    // Lien(s) source sur la carte
-    const srcUrls = pAll(ev, 'sourceUrl');
-    if (srcUrls.length) {
-      const firstUrl  = srcUrls[0];
-      const srcLabels = pAll(ev, 'sourceLabel');
-      let srcText;
-      if (srcLabels[0]) {
-        srcText = srcLabels[0].length > 30 ? srcLabels[0].slice(0, 28) + '…' : srcLabels[0];
-      } else {
-        try { srcText = new URL(firstUrl).hostname.replace(/^www\./, ''); } catch { srcText = firstUrl.slice(0, 28); }
-      }
-      const srcLink = document.createElement('a');
-      srcLink.href = firstUrl;
-      srcLink.target = '_blank';
-      srcLink.rel = 'noopener';
-      srcLink.className = 'ev-card-source';
-      srcLink.title = firstUrl;
-      srcLink.innerHTML =
-        `<span class="ev-card-source-icon">↗</span>${esc(srcText)}` +
-        (srcUrls.length > 1 ? `<span class="ev-card-source-extra">+${srcUrls.length - 1}</span>` : '');
-      srcLink.addEventListener('click', e => e.stopPropagation());
-      card.appendChild(srcLink);
-    }
-
+    // Sources : modal uniquement (supprimées des cartes)
     // Handlers — dot et carte partagent les mêmes actions
     const hlAll = () => { highlightConnectors(ev.id); highlightDotConnector(ev.id); };
     const clAll = () => { clearConnectorHighlights(); clearDotConnectorHighlights(); };
@@ -2713,6 +2843,103 @@ function buildDotConnectors(svg) {
     line.classList.add('dot-card-line');
     line.setAttribute('data-evid', evId);
     svg.appendChild(line);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   LIGNE CDP PAR PERSONNE
+   Pour chaque Person ayant des sociétés avec CDP connue :
+   tracer une ligne horizontale pointillée colorée traversant
+   toute la largeur du canvas, au niveau de la CDP la plus ancienne.
+═══════════════════════════════════════════════════════════ */
+function buildPersonCdpLines(svg) {
+  svg.querySelectorAll('.person-cdp-line, .person-cdp-label').forEach(el => el.remove());
+
+  const CDP_KWD = /cessation des paiements/i;
+
+  // 1. CDP par société (date la plus ancienne)
+  const cdpByCompany = {};
+  for (const ev of EVENTS) {
+    const text = [...pAll(ev,'name'), ...pAll(ev,'description')].join(' ');
+    if (!CDP_KWD.test(text)) continue;
+    const d = eventDate(ev);
+    if (!d) continue;
+    const refs = pAll(ev,'ftmRef').filter(id => {
+      const ent = ENTITIES[id];
+      return ent && (ent.schema === 'Company' || ent.schema === 'LegalEntity');
+    });
+    for (const coId of refs) {
+      if (!cdpByCompany[coId] || d < cdpByCompany[coId]) cdpByCompany[coId] = d;
+    }
+  }
+
+  // 2. Pour chaque Person : trouver la plus ancienne CDP parmi ses sociétés liées
+  const personOldestCdp = {};
+  for (const ent of Object.values(ENTITIES)) {
+    let personId = null, coId = null;
+    if (ent.schema === 'Directorship') {
+      personId = p1(ent,'director') || p1(ent,'person');
+      coId     = p1(ent,'organization');
+    } else if (ent.schema === 'Ownership') {
+      personId = p1(ent,'owner');
+      coId     = p1(ent,'asset');
+    }
+    if (!personId || !coId) continue;
+    const pEnt = ENTITIES[personId];
+    if (!pEnt || pEnt.schema !== 'Person') continue;
+    const d = cdpByCompany[coId];
+    if (!d) continue;
+    if (!personOldestCdp[personId] || d < personOldestCdp[personId].date) {
+      personOldestCdp[personId] = { date: d, via: coId };
+    }
+  }
+
+  // 3. Tracer les lignes
+  const tooltip = document.getElementById('band-tooltip');
+  for (const [personId, info] of Object.entries(personOldestCdp)) {
+    const pEnt  = ENTITIES[personId];
+    const pName = pEnt ? (p1(pEnt,'name') || personId) : personId;
+    const col   = personColor(personId);
+    const yLine = dateY(info.date);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', 0);
+    line.setAttribute('y1', yLine);
+    line.setAttribute('x2', CANVAS_WIDTH);
+    line.setAttribute('y2', yLine);
+    line.setAttribute('stroke', col);
+    line.classList.add('person-cdp-line');
+    line.setAttribute('data-person', personId);
+
+    line.addEventListener('mouseenter', (e) => {
+      const viaName = p1(ENTITIES[info.via], 'name') || info.via;
+      tooltip.innerHTML = `<strong style="color:${col}">${esc(pName)}</strong><br>CDP la plus ancienne : <em>${esc(formatDate(info.date))}</em><br><span style="opacity:0.72;font-size:0.9em">via ${esc(viaName)}</span>`;
+      tooltip.style.borderLeft = `3px solid ${col}`;
+      tooltip.style.display = 'block';
+    });
+    line.addEventListener('mousemove', (e) => {
+      const canvasEl = document.getElementById('canvas');
+      const rect = canvasEl.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+      tooltip.style.top  = (e.clientY - rect.top  - 10 + canvasEl.scrollTop) + 'px';
+    });
+    line.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    svg.appendChild(line);
+
+    // Label texte en SVG : nom de la personne, collé à gauche
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', 4);
+    label.setAttribute('y', yLine - 3);
+    label.setAttribute('fill', col);
+    label.setAttribute('font-size', '7.5');
+    label.setAttribute('font-family', 'var(--font-mono, monospace)');
+    label.setAttribute('letter-spacing', '0.06em');
+    label.setAttribute('opacity', '0.82');
+    label.setAttribute('pointer-events', 'none');
+    label.classList.add('person-cdp-label');
+    label.textContent = pName.toUpperCase() + ' — CDP';
+    svg.appendChild(label);
   }
 }
 
@@ -3365,6 +3592,7 @@ async function main() {
   svg.style.width  = CANVAS_WIDTH  + 'px';
   svg.style.height = CANVAS_HEIGHT + 'px';
   buildConnectors(svg);
+  buildPersonCdpLines(svg); // lignes CDP par personne
 
   // 6. Barre d'état
   updateInfoBar(files.length, manifest._last_deploy);
@@ -3729,9 +3957,35 @@ scrollTrack.addEventListener('scroll', () => {
   canvasEl.scrollLeft = scrollTrack.scrollLeft;
   _scrollSyncing = false;
 });
+/* ── Label de bande company fixe à l'écran ──────────────────
+   Maintient chaque co-band-label visible dans la fenêtre courante
+   en décalant son top d'un offset égal à combien la bande a été
+   défilée hors du haut du viewport.
+   Le z-index de la bande n'est pas modifié (label reste en arrière-plan).
+─────────────────────────────────────────────────────────── */
+function syncBandLabels() {
+  const st = canvasEl.scrollTop;
+  // Hauteur du canvas visible (viewport height) moins le header sticky
+  const hd = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hd-h') || '40', 10);
+  for (const band of document.querySelectorAll('.co-band')) {
+    const label = band.querySelector('.co-band-label');
+    if (!label) continue;
+    const bandTop    = parseFloat(band.style.top)   || 0;
+    const bandHeight = parseFloat(band.style.height) || 0;
+    // Combien de pixels du haut de la bande sont au-dessus du viewport courant
+    const hidden = Math.max(0, st + hd - bandTop);
+    // Clamper : le label ne peut pas descendre sous le bas de la bande
+    // (on garde une marge de 20px pour que le texte reste lisible)
+    const maxOffset = Math.max(0, bandHeight - 20);
+    const offset    = Math.min(hidden, maxOffset);
+    band.style.setProperty('--label-offset', offset + 'px');
+  }
+}
+
 canvasEl.addEventListener('scroll', () => {
   // Sync vertical (hors garde : pas de risque de boucle)
   syncYearSpine();
+  syncBandLabels(); // maintien des labels de bandes visibles à l'écran
   // Sync horizontal miroir
   if (_scrollSyncing) return;
   _scrollSyncing = true;
@@ -3863,6 +4117,7 @@ function rebuildCanvas() {
   svg.style.width  = CANVAS_WIDTH  + 'px';
   svg.style.height = CANVAS_HEIGHT + 'px';
   buildConnectors(svg);
+  buildPersonCdpLines(svg); // lignes CDP par personne
   buildDotConnectors(svg);
   buildDensityHeatmap();
   buildLegendPanel();
