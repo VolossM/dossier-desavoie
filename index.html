@@ -295,12 +295,17 @@ body::before {
 }
 
 .yr-block {
+  /* Positionnement absolu dans year-spine-inner : top + height fixés par JS depuis dateY() */
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--wire2);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: var(--pad-v);
-  border-bottom: 1px solid var(--wire2);
+  overflow: hidden;
 }
 
 .yr-label {
@@ -478,8 +483,8 @@ body::before {
 ═══════════════════════════════════════════ */
 .ev-anchor {
   position: absolute;
-  /* Pas de translateX : l'anchor est ancré à son bord gauche = bord droit de la bande */
-  z-index: 10;
+  /* Ancré à sa colonne d'axe ; le trait dot-card-line relie visuellement au dot sur bande */
+  z-index: 25; /* > co-band:hover(20) et co-band.ubo-lit(22) */
 }
 .ev-anchor:hover,
 .ev-anchor.hovered {
@@ -489,16 +494,20 @@ body::before {
 /* Nœud dot — positionné directement sur la bande société (indépendant de la carte) */
 .ev-dot-node {
   position: absolute;
-  z-index: 10;
+  z-index: 25; /* > co-band:hover(20) et co-band.ubo-lit(22) — toujours au premier plan */
   pointer-events: none; /* les événements sont capturés par .ev-dot enfant */
 }
 
-/* Étiquette date à gauche du dot */
+/* Étiquette date à gauche du dot — ancrée sur l'anchor (yFinal+DOT_R),
+   pas sur le dotNode (yNat), pour s'aligner sur la carte décompressée */
 .ev-dot-label {
   position: absolute;
   left: 0;
   top: 0;
-  transform: translate(calc(-100% - var(--dot-r) - 5px), -1px);
+  /* anchor.top = yFinal + DOT_R = centre vertical du dot côté carte.
+     translateX : à gauche du dot (bord gauche du dot = left - DOT_R).
+     translateY(-50%) : centré verticalement sur le centre du dot. */
+  transform: translate(calc(-100% - var(--dot-r) - 5px), -50%);
   font-family: var(--font-mono);
   font-size: 7.5px;
   font-weight: 600;
@@ -506,9 +515,9 @@ body::before {
   text-transform: uppercase;
   color: var(--ink);
   white-space: nowrap;
-  text-shadow: 0 0 3px #fff, 0 0 6px #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff;
+  text-shadow: 0 0 4px #fff, 0 0 8px #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff;
   pointer-events: none;
-  opacity: 0.78;
+  opacity: 0.82;
   z-index: 4;
 }
 
@@ -520,8 +529,12 @@ body::before {
   transform: translateX(-50%) scale(1.5);
   box-shadow: 0 0 0 4px rgba(255,255,255,0.55);
 }
-.ev-dot-node.band-hovered .ev-dot-label {
+/* Date label dans l'anchor (band-hovered = la carte ET la date se surligent ensemble) */
+.ev-anchor.band-hovered .ev-dot-label {
   opacity: 1;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-shadow: 0 0 6px #fff, 0 0 12px #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff;
 }
 .ev-dot-node.band-dimmed {
   opacity: 0.18;
@@ -598,7 +611,7 @@ body::before {
   background: #fff;
   border: 1px solid var(--wire);
   border-radius: 4px;
-  padding: 0 12px 9px;
+  padding: 0 12px 9px; /* padding-top = 0 : coin haut-gauche aligné au centre du dot */
   box-shadow: 0 2px 12px rgba(10,11,13,0.07), 0 1px 3px rgba(10,11,13,0.04);
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.2s var(--ease-out), opacity 0.15s;
@@ -615,7 +628,7 @@ body::before {
   box-shadow: 0 6px 24px rgba(10,11,13,0.12), 0 2px 6px rgba(10,11,13,0.06);
   transform: translateY(-1px);
 }
-.ev-card.right { left: calc(var(--dot-r) + 10px); }
+.ev-card.right { left: calc(var(--dot-r) + 4px); }
 
 .ev-card-title {
   font-family: var(--font-display);
@@ -1371,7 +1384,7 @@ body::before {
 <div id="scroll-track"><span id="scroll-track-ghost"></span></div>
 
 <!-- STAGE -->
-<div id="stage" style="padding-bottom: 60px;">
+<div id="stage">
   <div id="year-spine"></div>
   <div id="canvas">
     <canvas id="density-heatmap"></canvas>
@@ -1894,35 +1907,43 @@ function buildYearSpine() {
   spine.innerHTML = '<div id="year-spine-inner"></div>';
   const inner = document.getElementById('year-spine-inner');
 
-  // Pas adaptatif
+  // ── Positionnement absolu de chaque bloc dans inner ──
+  // Chaque bloc occupe exactement la plage canvas correspondant à son année.
+  // Cela fonctionne dans les deux sens (INVERT_TIMELINE ou non) parce que dateY()
+  // applique déjà l'inversion : avec INVERT_TIMELINE, une année récente → petit Y
+  // (haut du canvas), une ancienne → grand Y (bas).
+  inner.style.height = CANVAS_FIXED_H + 'px';
+
   const MIN_LABEL_H = 14;
   const STEPS = [1, 2, 5, 10, 25, 50, 100];
   function snapStep(rawStep) {
     return STEPS.find(s => s >= rawStep) ?? STEPS[STEPS.length - 1];
   }
 
-  // Avec INVERT_TIMELINE, les années récentes sont en haut :
-  // on itère de lastYear vers firstYear pour que le DOM reflète l'ordre visuel.
-  const yStart = INVERT_TIMELINE ? lastYear  : firstYear;
-  const yEnd   = INVERT_TIMELINE ? firstYear : lastYear;
-  const yStep  = INVERT_TIMELINE ? -1 : 1;
-
-  for (let y = yStart; INVERT_TIMELINE ? y >= yEnd : y <= yEnd; y += yStep) {
-    // Avec inversion : bloc pour l'année y s'étend de dateY(y+1) (haut) à dateY(y) (bas)
-    const yTop = INVERT_TIMELINE
-      ? Math.min(CANVAS_FIXED_H - CANVAS_PAD_BOTTOM, dateY(`${y+1}-01-01`))
-      : dateY(`${y}-01-01`);
-    const yBot = INVERT_TIMELINE
-      ? dateY(`${y}-01-01`)
-      : Math.min(CANVAS_FIXED_H, dateY(`${y+1}-01-01`));
+  for (let y = firstYear; y <= lastYear; y++) {
+    // yTop = Y canvas du début du bloc (bord supérieur = plus petit Y)
+    // yBot = Y canvas de la fin du bloc (bord inférieur = plus grand Y)
+    let yTop, yBot;
+    if (INVERT_TIMELINE) {
+      // Récent en haut : l'année y+1 (plus récente) a un Y plus petit que l'année y
+      yTop = dateY(`${y+1}-01-01`); // début du bloc (haut)
+      yBot = dateY(`${y}-01-01`);   // fin du bloc (bas)
+    } else {
+      yTop = dateY(`${y}-01-01`);
+      yBot = dateY(`${y+1}-01-01`);
+    }
+    yTop = Math.max(0, Math.min(CANVAS_FIXED_H, yTop));
+    yBot = Math.max(0, Math.min(CANVAS_FIXED_H, yBot));
     const height = Math.max(0, yBot - yTop);
+    if (height < 1) continue;
 
     const block = document.createElement('div');
     block.className = 'yr-block';
+    block.style.top    = yTop + 'px';
     block.style.height = height + 'px';
     block.setAttribute('data-year', y);
 
-    const step  = snapStep(height > 0 ? MIN_LABEL_H / height : 100);
+    const step = snapStep(height > 0 ? MIN_LABEL_H / height : 100);
     if (y % step === 0) {
       const label = document.createElement('div');
       label.className = 'yr-label';
@@ -2238,8 +2259,8 @@ function buildAxisRails(canvas) {
 /* ═══════════════════════════════════════════════════════════
    EVENT NODES
 ═══════════════════════════════════════════════════════════ */
-// Retourne le X du dot : bord droit de la bande de la 1ère société ftmRef
-// qui possède un layout. Fallback = bord droit du bloc de bandes de l'axe.
+// Retourne le X du dot : centre de la bande de la 1ère société ftmRef
+// qui possède un layout. Fallback = centre du bloc de bandes de l'axe.
 function evDotX(ev, ax) {
   const refs = pAll(ev, 'ftmRef');
   for (const ref of refs) {
@@ -2268,7 +2289,9 @@ function buildEvents_DOM(canvas) {
   // N bandes vers la droite déterminées dynamiquement depuis CARD_W_PX.
   // Deux événements sont co-dépilés si leur distance xNat < CARD_W_PX
   // (leurs cartes se chevauchent horizontalement).
-  const CARD_W_PX = 220; // doit correspondre à --card-w
+  // CARD_W_PX lu sur l'élément racine pour coller à la variable CSS --card-w au zoom courant.
+  const CARD_W_PX = parseFloat(getComputedStyle(document.documentElement)
+                        .getPropertyValue('--card-w')) || 220;
   const placed = []; // { ev, ax, xNat, yNat, yFinal, peeked, stackDepth }
 
   if (INVERT_TIMELINE) {
@@ -2338,19 +2361,6 @@ function buildEvents_DOM(canvas) {
     dotNode.style.left = xDot + 'px';
     dotNode.style.top  = yNat + 'px';
 
-    // ── Label date à gauche du dot ──
-    const dateStr  = eventDate(ev);
-    const endStr   = eventEndDate(ev);
-    const dateDisplay = endStr
-      ? `${formatDate(dateStr)} – ${formatDate(endStr)}`
-      : formatDate(dateStr);
-    if (dateStr) {
-      const dateLabel = document.createElement('div');
-      dateLabel.className = 'ev-dot-label';
-      dateLabel.textContent = dateDisplay;
-      dotNode.appendChild(dateLabel);
-    }
-
     // Segment bar pour événements à durée (ancré sur le dot)
     const endDate = eventEndDate(ev);
     if (endDate) {
@@ -2372,8 +2382,17 @@ function buildEvents_DOM(canvas) {
 
     canvas.appendChild(dotNode);
 
-    // ── Card anchor — colonne d'axe (xNat), position verticale décompressée ──
-    // Le coin haut-gauche de l'anchor est au centre du dot (yNat + DOT_R).
+    // ── Card anchor — ancré sur le centre du dot (xDot, yFinal+DOT_R) ──
+    // Le coin haut-gauche de l'anchor est au centre vertical du dot :
+    //   X = xDot (centre de la bande)
+    //   Y = yFinal + DOT_R (intègre l'empilement — c'est là que s'affiche la carte)
+    // Le dateLabel est rattaché ici pour s'aligner sur la carte, pas sur le dot à yNat.
+    const dateStr  = eventDate(ev);
+    const endStr   = eventEndDate(ev);
+    const dateDisplay = endStr
+      ? `${formatDate(dateStr)} – ${formatDate(endStr)}`
+      : formatDate(dateStr);
+
     const anchor = document.createElement('div');
     anchor.className = 'ev-anchor';
     anchor.id = `ev-${ev.id}`;
@@ -2381,8 +2400,18 @@ function buildEvents_DOM(canvas) {
     anchor.setAttribute('data-dot-x', xDot);
     anchor.setAttribute('data-dot-y', yNat);
     if (coIds) anchor.dataset.coIds = coIds;
-    anchor.style.left = xNat + 'px';
+    anchor.style.left = xDot + 'px';
     anchor.style.top  = (yFinal + DOT_R) + 'px';
+
+    // ── Label date à gauche du dot, ancré sur l'anchor ──
+    // anchor.top = yFinal + DOT_R = centre vertical du dot côté carte.
+    // translateY(-50%) centre l'étiquette sur ce point.
+    if (dateStr) {
+      const dateLabel = document.createElement('div');
+      dateLabel.className = 'ev-dot-label';
+      dateLabel.textContent = dateDisplay;
+      anchor.appendChild(dateLabel);
+    }
 
     // Card
     const card = document.createElement('div');
@@ -2512,18 +2541,20 @@ function buildDotConnectors(svg) {
     const yDot  = +anchor.getAttribute('data-dot-y');
     const xCard = parseFloat(anchor.style.left);
     const yCard = parseFloat(anchor.style.top);
-    // Pas de trait si dot et carte sont au même pixel (événement sans ftmRef company)
-    if (Math.abs(xDot - xCard) < 2 && Math.abs(yDot - yCard) < 2) continue;
+
+    // Origine du trait : centre du dot (xDot, yDot + DOT_R)
+    // Destination : coin haut-gauche de l'anchor (xCard, yCard) = (xDot, yFinal + DOT_R)
+    // Pour un événement non empilé : yCard = yDot + DOT_R → trait de longueur nulle → skip.
+    const x1 = xDot,        y1 = yDot + DOT_R;
+    const x2 = xCard,       y2 = yCard;
+    // Ne pas tracer de trait si les deux extrémités coïncident (non empilé ou sans company band)
+    if (Math.abs(x1 - x2) < 2 && Math.abs(y1 - y2) < 2) continue;
 
     const evId = anchor.id.replace(/^ev-/, '');
     const ev = EVENTS.find(e => e.id === evId);
     if (!ev) continue;
     const ax = AXIS_MAP[ev._resolvedAxis];
     if (!ax) continue;
-
-    // dot center → coin haut-gauche de la carte (= centre du dot, new positioning)
-    const x1 = xDot,  y1 = yDot  + DOT_R;
-    const x2 = xCard, y2 = yCard;
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', x1); line.setAttribute('y1', y1);
