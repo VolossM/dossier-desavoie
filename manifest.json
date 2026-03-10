@@ -101,55 +101,55 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "8d4d68615ff71237bf3037954b74b06d2e340656ff68898e329e5594d98674fe",
-      "version": 31,
-      "size": 113799,
-      "deployed": "2026-03-09T12:10:49Z"
+      "sha256": "6119b23039f8b2a9d34754063d93aadd47fc73e85e1d9fce364c6e5319e428f4",
+      "version": 33,
+      "size": 117885,
+      "deployed": "2026-03-10T17:54:28Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "ff3214f178e32b0e69552ff4ab88e9ea5106f30b463e2ccc8a3816b6de33adc0",
-      "version": 30,
-      "size": 89491,
-      "deployed": "2026-03-10T13:15:04Z"
+      "sha256": "3f2acca0827c3442e14161da68ff13bc7cc9ebb8ad755b793e99fb76fcf9a7d1",
+      "version": 31,
+      "size": 91205,
+      "deployed": "2026-03-10T17:54:28Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
       "label": "Réseau Zimmermann — Monaco · Sygnum",
-      "sha256": "feed0c41ecb0d6f766ad30f4f0be745336945916ba3344c63c651fc7eda38f97",
-      "version": 31,
-      "size": 42781,
-      "deployed": "2026-03-10T11:47:46Z"
+      "sha256": "c0c49c5bf1896a161e1a907af3c4de285540a41cdbbe316b0bdfecb2679251c4",
+      "version": 32,
+      "size": 43338,
+      "deployed": "2026-03-10T17:54:28Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "1071a873277d0398f3d0049e321861bd5a9aeb1c6fbae30e246b6ebc6e51e78d",
-      "version": 29,
-      "size": 47823,
-      "deployed": "2026-03-10T17:51:19Z"
+      "sha256": "7fd208654dc248f0263f1fdceb6a6367f8b41921c4075fd36a537c8721e303c0",
+      "version": 30,
+      "size": 48132,
+      "deployed": "2026-03-10T17:54:28Z"
     },
     {
       "path": "data/espagne.ftm.jsonl",
       "axis": "espagne",
       "label": "Opérations espagnoles — Perucchi / RIC / Badalona",
-      "sha256": "0d935b115bd7276f433d8c3a3863180a012011b9410ce77ec1fb08b2b705f2a7",
-      "version": 1,
-      "size": 12864,
-      "deployed": "2026-03-10T11:47:46Z"
+      "sha256": "2aed8cb2829e35d9f8a63585e81c837393488cb6c53e237ee515610ed453ee56",
+      "version": 2,
+      "size": 16456,
+      "deployed": "2026-03-10T17:54:28Z"
     },
     {
       "path": "data/shams_indonesie.ftm.jsonl",
       "axis": "dubai",
       "label": "Shams Equity / Dubaï–Indonésie",
-      "sha256": "9840906081c67890c57bc023b7ff25aff7e5f674b99c2f5121bdb142cfc747b2",
-      "version": 29,
-      "size": 17221,
-      "deployed": "2026-03-10T11:47:46Z"
+      "sha256": "b139b5f6252133bf1fa474d7893ab88d09226154b4c8bdf302868967eafbacb5",
+      "version": 30,
+      "size": 17394,
+      "deployed": "2026-03-10T17:54:28Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
@@ -170,5 +170,5 @@
       "deployed": "2026-03-10T11:47:46Z"
     }
   ],
-  "_last_deploy": "2026-03-10T17:51:19Z"
+  "_last_deploy": "2026-03-10T17:54:28Z"
 }
