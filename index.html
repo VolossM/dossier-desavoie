@@ -137,8 +137,21 @@ body::before {
 }
 @media (max-width: 480px) {
   .hd-title         { font-size: 13px; }
-  .hd-axes          { overflow-x: auto; scrollbar-width: none; }
-  .hd-axes::-webkit-scrollbar { display: none; }
+  /* Sur mobile : axes masqués (accessible via légende), plus d'espace pour le titre */
+  .hd-axes          { display: none; }
+  #app-header       { height: 48px; }
+  /* year-spine plus mince sur mobile */
+  #year-spine       { width: 36px; }
+  /* Stage recalcul pour header 48px */
+  #stage            { height: calc(100dvh - 48px - 10px - 44px); }
+  /* Info-bar plus haute sur mobile (zone tactile) */
+  #info-bar         { height: 44px; padding: 0 12px; }
+  /* Légende : overlay pleine largeur sur mobile */
+  #legend-panel     { left: 0; right: 0; width: 100%; top: 58px; }
+  /* Cartes plus étroites sur très petits écrans */
+  :root             { --card-w: 180px; }
+  /* Dots plus grands pour zone de tap */
+  :root             { --dot-r: 9px; }
 }
 
 .hd-axes {
@@ -1067,10 +1080,18 @@ body::before {
 #inf-schema-btns { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
 @media (max-width: 768px) { #inf-schema-btns { display: none; } #inf-search { display: none; } }
 @media (max-width: 600px) {
-  #info-bar { gap: 12px; padding: 0 10px; font-size: 8px; overflow-x: auto; }
+  #info-bar { gap: 10px; padding: 0 10px; font-size: 8px; overflow-x: auto; }
   #info-bar .inf-sep { display: none; }
   #info-bar #inf-connect-toggle,
-  #info-bar #inf-deploy-ts { display: none; }
+  #info-bar #inf-deploy-ts,
+  #info-bar #inf-integrity,
+  #info-bar #inf-entity-count,
+  #info-bar #inf-file-count  { display: none; }
+}
+@media (max-width: 480px) {
+  /* Mobile : info-bar minimale = compteur + order toggle + zoom */
+  #info-bar #inf-event-count { font-size: 9px; }
+  #inf-scale-block { display: none; }
 }
 #info-bar .inf-sep { opacity: 0.3; }
 #info-bar #inf-event-count { color: #9db0c8; }
@@ -2144,28 +2165,57 @@ function buildEvents_DOM(canvas) {
     byX.get(key).push(item);
   }
 
-  // Pour chaque groupe, trier par Y puis décaler les cartes compressées
+  // Direction d'empilement : suit le sens de lecture de la frise.
+  // INVERT=true  (récent en haut) → trier DESC (ancien en bas = traité en premier),
+  //   pousser vers le HAUT (Y décroissant = direction présent).
+  //   → les événements récents s'empilent vers le haut autour de l'ancre = l'événement le plus ancien.
+  // INVERT=false (ancien en haut) → trier ASC (ancien en haut = traité en premier),
+  //   pousser vers le BAS (Y croissant = direction présent).
+  //   → logique symétrique.
   const placed = []; // { ev, ax, xNat, yFinal, peeked, stackDepth }
   for (const [, group] of byX) {
-    group.sort((a, b) => a.yNat - b.yNat);
-    let cursor = -Infinity; // bas estimé de la dernière carte placée
-    for (let i = 0; i < group.length; i++) {
-      const item = group[i];
-      let yFinal = item.yNat;
-      let peeked = false;
-      let stackDepth = 0;
+    if (INVERT_TIMELINE) {
+      // ── Mode inversé : descending Y (ancien = grand Y, traité en premier) ──
+      group.sort((a, b) => b.yNat - a.yNat);
+      let cursor = +Infinity; // bord supérieur de la dernière carte placée
+      for (let i = 0; i < group.length; i++) {
+        const item = group[i];
+        let yFinal = item.yNat;
+        let peeked = false;
+        let stackDepth = 0;
 
-      if (yFinal < cursor + PEEK_GAP) {
-        // Collision : comprimer et décaler
-        yFinal = cursor + PEEK_GAP;
-        peeked = true;
-        // Compte le nombre de cartes compressées consécutives au-dessus
-        stackDepth = placed.filter(p => p.xNat === item.xNat && p.peeked).length;
+        if (yFinal + CARD_EST_H > cursor - PEEK_GAP) {
+          // Collision vers le haut : comprimer et décaler vers le haut
+          yFinal = cursor - PEEK_GAP - (i === 0 ? CARD_EST_H : PEEK_H);
+          peeked = true;
+          stackDepth = placed.filter(p => p.xNat === item.xNat && p.peeked).length;
+        }
+
+        const cardH = peeked ? PEEK_H : CARD_EST_H;
+        cursor = yFinal;   // bord supérieur de cette carte = limite haute pour la prochaine
+        placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
       }
+    } else {
+      // ── Mode normal : ascending Y (ancien = petit Y, traité en premier) ──
+      group.sort((a, b) => a.yNat - b.yNat);
+      let cursor = -Infinity; // bas estimé de la dernière carte placée
+      for (let i = 0; i < group.length; i++) {
+        const item = group[i];
+        let yFinal = item.yNat;
+        let peeked = false;
+        let stackDepth = 0;
 
-      const cardH = peeked ? PEEK_H : CARD_EST_H;
-      cursor = yFinal + cardH;
-      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
+        if (yFinal < cursor + PEEK_GAP) {
+          // Collision vers le bas : comprimer et décaler vers le bas
+          yFinal = cursor + PEEK_GAP;
+          peeked = true;
+          stackDepth = placed.filter(p => p.xNat === item.xNat && p.peeked).length;
+        }
+
+        const cardH = peeked ? PEEK_H : CARD_EST_H;
+        cursor = yFinal + cardH;
+        placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
+      }
     }
   }
 
@@ -2268,6 +2318,8 @@ function buildEvents_DOM(canvas) {
     dot.addEventListener('mouseenter', (e) => { showTooltip(e, ev); hlAll(); });
     dot.addEventListener('mouseleave',  () => { hideTooltip(); clAll(); });
     dot.addEventListener('click',  () => openModal(ev));
+    // Sur mobile : tap = ouvrir modal directement (pas de hover)
+    dot.addEventListener('touchend', (e) => { e.preventDefault(); openModal(ev); }, { passive: false });
     card.addEventListener('click', () => openModal(ev));
     card.addEventListener('mouseenter', hlAll);
     card.addEventListener('mouseleave',  clAll);
@@ -3423,7 +3475,54 @@ canvasEl.addEventListener('wheel', (e) => {
   }, 80);
 }, { passive: false });
 
-// ── Boutons +/− ──────────────────────────────────────────
+// ── Pinch-to-zoom tactile ──────────────────────────────────
+let _pinchDist0 = null; // distance inter-doigts au début du pinch
+let _pinchZoom0 = null; // ZOOM au début du pinch
+let _pinchScrollTop0 = null;
+let _pinchScrollLeft0 = null;
+let _pinchMidY0 = null;
+
+function _touchDist(t) {
+  const dx = t[0].clientX - t[1].clientX;
+  const dy = t[0].clientY - t[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+canvasEl.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    _pinchDist0    = _touchDist(e.touches);
+    _pinchZoom0    = ZOOM;
+    _pinchScrollTop0  = canvasEl.scrollTop;
+    _pinchScrollLeft0 = canvasEl.scrollLeft;
+    const rect = canvasEl.getBoundingClientRect();
+    _pinchMidY0 = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+  }
+}, { passive: true });
+
+canvasEl.addEventListener('touchmove', (e) => {
+  if (e.touches.length !== 2 || _pinchDist0 === null) return;
+  e.preventDefault();
+  const dist = _touchDist(e.touches);
+  const ratio = dist / _pinchDist0;
+  // Trouver le ZOOM_STEP le plus proche du ZOOM cible
+  const targetZ = Math.max(ZOOM_STEPS[0], Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], _pinchZoom0 * ratio));
+  const closest = ZOOM_STEPS.reduce((a, b) => Math.abs(b - targetZ) < Math.abs(a - targetZ) ? b : a);
+  if (Math.abs(closest - ZOOM) < 0.001) return;
+  const oldZoom = ZOOM;
+  ZOOM = closest;
+  updateZoomLabel();
+  clearTimeout(_zoomWheelTimer);
+  _zoomWheelTimer = setTimeout(() => {
+    const scaleRatio = ZOOM / oldZoom;
+    rebuildCanvas();
+    canvasEl.scrollTop  = (_pinchMidY0 + _pinchScrollTop0)  * scaleRatio - _pinchMidY0;
+    canvasEl.scrollLeft = _pinchScrollLeft0 * scaleRatio;
+  }, 80);
+}, { passive: false });
+
+canvasEl.addEventListener('touchend', () => {
+  if (_pinchDist0 !== null) { _pinchDist0 = null; _pinchZoom0 = null; }
+}, { passive: true });
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inf-zoom-in')?.addEventListener('click',  () => stepZoom(+1));
   document.getElementById('inf-zoom-out')?.addEventListener('click', () => stepZoom(-1));
