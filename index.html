@@ -39,6 +39,11 @@
   --year-w: 56px;
   --pad-v:  18px;
 
+  /* Hauteurs structurelles — propagées à tous les éléments dépendants */
+  --hd-h:   56px;   /* hauteur #app-header */
+  --ib-h:   28px;   /* hauteur #info-bar */
+  --st-trk: 10px;   /* hauteur #scroll-track */
+
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -80,7 +85,7 @@ body::before {
   display: flex;
   align-items: stretch;
   gap: 0;
-  height: 56px;
+  height: var(--hd-h);
 }
 
 .hd-brand {
@@ -135,23 +140,63 @@ body::before {
   .hd-brand         { padding: 0 14px; gap: 10px; }
   .hd-meta          { padding: 0 10px; }
 }
+
+/* ── Tablette paysage / petite tablette ─────────────────── */
+@media (max-width: 768px) {
+  :root { --card-w: 190px; }
+  .hd-axes { overflow-x: auto; scrollbar-width: none; }
+  .hd-axes::-webkit-scrollbar { display: none; }
+}
+
+/* ── Mobile portrait (≤ 480px) ─────────────────────────── */
 @media (max-width: 480px) {
-  .hd-title         { font-size: 13px; }
-  /* Sur mobile : axes masqués (accessible via légende), plus d'espace pour le titre */
-  .hd-axes          { display: none; }
-  #app-header       { height: 48px; }
-  /* year-spine plus mince sur mobile */
-  #year-spine       { width: 36px; }
-  /* Stage recalcul pour header 48px */
-  #stage            { height: calc(100dvh - 48px - 10px - 44px); }
-  /* Info-bar plus haute sur mobile (zone tactile) */
-  #info-bar         { height: 44px; padding: 0 12px; }
-  /* Légende : overlay pleine largeur sur mobile */
-  #legend-panel     { left: 0; right: 0; width: 100%; top: 58px; }
-  /* Cartes plus étroites sur très petits écrans */
-  :root             { --card-w: 180px; }
-  /* Dots plus grands pour zone de tap */
-  :root             { --dot-r: 9px; }
+  /* Variables structurelles : propagées à tout ce qui en dépend */
+  :root {
+    --hd-h:   44px;
+    --ib-h:   44px;   /* zone tactile confortable */
+    --year-w: 32px;
+    --card-w: 170px;
+    --dot-r:  9px;    /* cibles de tap plus larges */
+  }
+
+  /* Header */
+  .hd-title   { font-size: 12px; }
+  /* Axes : défilement horizontal silencieux au lieu de disparaître */
+  .hd-axes    {
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .hd-axes::-webkit-scrollbar { display: none; }
+  .hd-axis-pill   { padding: 0 8px; }
+  .hd-axis-label  { font-size: 9px; }
+  .hd-brand       { padding: 0 10px; gap: 8px; flex-shrink: 0; }
+  .hd-meta        { padding: 0 8px; flex-shrink: 0; }
+
+  /* Info-bar : alléger les éléments secondaires */
+  #info-bar         { gap: 10px; padding: 0 12px; font-size: 8px; }
+  #info-bar .inf-sep,
+  #info-bar #inf-connect-toggle,
+  #info-bar #inf-deploy-ts,
+  #info-bar #inf-integrity,
+  #info-bar #inf-entity-count,
+  #info-bar #inf-file-count,
+  #info-bar #inf-scale-block { display: none; }
+
+  /* Légende mobile : bottom sheet (remonte depuis le bas) */
+  #legend-panel {
+    left: 0;
+    right: 0;
+    width: 100%;
+    top: auto;         /* annule le top calculé */
+    bottom: var(--ib-h);
+    max-height: 55dvh;
+    border-radius: 12px 12px 0 0;
+    border-right: none;
+    border-top: 1px solid var(--wire2);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  }
 }
 
 .hd-axes {
@@ -225,7 +270,7 @@ body::before {
   position: relative;
   display: flex;
   width: 100%;
-  height: calc(100vh - 56px - 10px - 28px); /* header + scroll-track + info-bar */
+  height: calc(100dvh - var(--hd-h) - var(--st-trk) - var(--ib-h)); /* header + scroll-track + info-bar */
   overflow: hidden;
 }
 
@@ -423,7 +468,7 @@ body::before {
 /* ─ axis column header label ─ */
 .axis-col-header {
   position: sticky;
-  top: 56px;
+  top: var(--hd-h);
   z-index: 50;
   pointer-events: none;
 }
@@ -446,6 +491,58 @@ body::before {
   position: absolute;
   z-index: 10;
   pointer-events: none; /* les événements sont capturés par .ev-dot enfant */
+}
+
+/* Étiquette date à gauche du dot */
+.ev-dot-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(calc(-100% - var(--dot-r) - 5px), -1px);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+  text-shadow: 0 0 3px #fff, 0 0 6px #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff;
+  pointer-events: none;
+  opacity: 0.78;
+  z-index: 4;
+}
+
+/* Surlignage dots / cartes sur hover bande company */
+.ev-dot-node.band-hovered {
+  z-index: 200 !important;
+}
+.ev-dot-node.band-hovered .ev-dot {
+  transform: translateX(-50%) scale(1.5);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.55);
+}
+.ev-dot-node.band-hovered .ev-dot-label {
+  opacity: 1;
+}
+.ev-dot-node.band-dimmed {
+  opacity: 0.18;
+  transition: opacity 0.1s;
+}
+.ev-anchor.band-hovered {
+  z-index: 850 !important;
+}
+.ev-anchor.band-hovered .ev-card {
+  box-shadow: 0 6px 28px rgba(10,11,13,0.18), 0 2px 8px rgba(10,11,13,0.09);
+}
+.ev-anchor.band-dimmed {
+  opacity: 0.12;
+  transition: opacity 0.1s;
+}
+.dot-card-line.band-hovered {
+  stroke-opacity: 0.75 !important;
+  stroke-width: 2;
+}
+.dot-card-line.band-dimmed {
+  stroke-opacity: 0.03 !important;
 }
 .ev-dot-node .ev-dot {
   pointer-events: all;
@@ -497,11 +594,11 @@ body::before {
 .ev-card {
   position: absolute;
   width: var(--card-w);
-  top: calc(var(--dot-r) - 2px);
+  top: 0;
   background: #fff;
   border: 1px solid var(--wire);
   border-radius: 4px;
-  padding: 10px 12px 9px;
+  padding: 0 12px 9px;
   box-shadow: 0 2px 12px rgba(10,11,13,0.07), 0 1px 3px rgba(10,11,13,0.04);
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.2s var(--ease-out), opacity 0.15s;
@@ -935,9 +1032,9 @@ body::before {
 ═══════════════════════════════════════════ */
 #scroll-track {
   position: sticky;
-  top: 56px;          /* height of #app-header */
+  top: var(--hd-h);          /* height of #app-header */
   z-index: 190;
-  height: 10px;
+  height: var(--st-trk);
   overflow-x: scroll;
   overflow-y: hidden;
   background: var(--ink2);
@@ -1018,7 +1115,7 @@ body::before {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 28px;
+  height: var(--ib-h);
   background: var(--ink2);
   border-top: 1px solid var(--ink3);
   display: flex;
@@ -1079,20 +1176,6 @@ body::before {
 .inf-schema-btn:hover { background: rgba(255,255,255,0.08); }
 #inf-schema-btns { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
 @media (max-width: 768px) { #inf-schema-btns { display: none; } #inf-search { display: none; } }
-@media (max-width: 600px) {
-  #info-bar { gap: 10px; padding: 0 10px; font-size: 8px; overflow-x: auto; }
-  #info-bar .inf-sep { display: none; }
-  #info-bar #inf-connect-toggle,
-  #info-bar #inf-deploy-ts,
-  #info-bar #inf-integrity,
-  #info-bar #inf-entity-count,
-  #info-bar #inf-file-count  { display: none; }
-}
-@media (max-width: 480px) {
-  /* Mobile : info-bar minimale = compteur + order toggle + zoom */
-  #info-bar #inf-event-count { font-size: 9px; }
-  #inf-scale-block { display: none; }
-}
 #info-bar .inf-sep { opacity: 0.3; }
 #info-bar #inf-event-count { color: #9db0c8; }
 #info-bar #inf-connect-toggle,
@@ -1165,9 +1248,9 @@ body::before {
 /* ── Panneau légende (overlay togglable) ── */
 #legend-panel {
   position: fixed;
-  left: 56px;
-  top: 66px;
-  bottom: 28px;
+  left: var(--year-w);
+  top: calc(var(--hd-h) + var(--st-trk));
+  bottom: var(--ib-h);
   width: 170px;
   z-index: 150;
   background: rgba(245, 244, 241, 0.97);
@@ -1337,7 +1420,7 @@ body::before {
 
 <!-- INTEGRITY PANEL -->
 <div id="integrity-panel" style="
-  display:none; position:fixed; bottom:28px; right:0;
+  display:none; position:fixed; bottom:var(--ib-h); right:0;
   width:480px; max-height:320px; overflow-y:auto;
   background:#1a1c22; border:1px solid #2d3040; border-right:none;
   border-radius:4px 0 0 0; z-index:300;
@@ -2074,7 +2157,7 @@ function buildAxisRails(canvas) {
       band.appendChild(line);
     }
 
-    // Tooltip au survol de la bande + surlignage UBO
+    // Tooltip au survol de la bande + surlignage UBO + surlignage événements liés
     band.addEventListener('mouseenter', (e) => {
       const name_   = p1(co, 'name')         || coId;
       const form    = p1(co, 'legalForm')     || '';
@@ -2111,11 +2194,36 @@ function buildAxisRails(canvas) {
       // Surlignage groupé par UBO
       _clearUboHighlight();
       _triggerUboHighlight(coId);
+      // ── Surlignage dots, cartes et lignes liés à cette société ──
+      document.querySelectorAll('.ev-dot-node[data-co-ids]').forEach(node => {
+        const ids = node.dataset.coIds.split(' ');
+        node.classList.toggle('band-hovered', ids.includes(coId));
+        node.classList.toggle('band-dimmed',  !ids.includes(coId));
+      });
+      document.querySelectorAll('.ev-anchor[data-co-ids]').forEach(node => {
+        const ids = node.dataset.coIds.split(' ');
+        node.classList.toggle('band-hovered', ids.includes(coId));
+        node.classList.toggle('band-dimmed',  !ids.includes(coId));
+      });
+      document.querySelectorAll('.dot-card-line[data-evid]').forEach(line => {
+        const evId = line.getAttribute('data-evid');
+        const anch = document.getElementById(`ev-${evId}`);
+        const ids  = anch ? (anch.dataset.coIds || '').split(' ') : [];
+        line.classList.toggle('band-hovered', ids.includes(coId));
+        line.classList.toggle('band-dimmed',  !ids.includes(coId));
+      });
     });
     band.addEventListener('mousemove', _moveBandTooltip);
     band.addEventListener('mouseleave', () => {
       tooltip.style.display = 'none';
       _clearUboHighlight();
+      // Effacer le surlignage
+      document.querySelectorAll('.ev-dot-node.band-hovered, .ev-dot-node.band-dimmed').forEach(n =>
+        n.classList.remove('band-hovered', 'band-dimmed'));
+      document.querySelectorAll('.ev-anchor.band-hovered, .ev-anchor.band-dimmed').forEach(n =>
+        n.classList.remove('band-hovered', 'band-dimmed'));
+      document.querySelectorAll('.dot-card-line.band-hovered, .dot-card-line.band-dimmed').forEach(l =>
+        l.classList.remove('band-hovered', 'band-dimmed'));
     });
 
     canvas.appendChild(band);
@@ -2136,9 +2244,9 @@ function evDotX(ev, ax) {
   const refs = pAll(ev, 'ftmRef');
   for (const ref of refs) {
     const lay = _companyLayout[ref];
-    if (lay) return lay.xPx + lay.wPx;
+    if (lay) return lay.xPx + Math.floor(lay.wPx / 2); // centre de la bande
   }
-  return ax._xStart + (ax._wPx || BAND_W);
+  return ax._xStart + Math.floor((ax._wPx || BAND_W) / 2);
 }
 
 function buildEvents_DOM(canvas) {
@@ -2156,66 +2264,61 @@ function buildEvents_DOM(canvas) {
     items.push({ ev, ax, xNat: Math.round(xNat), yNat });
   }
 
-  // ── Passe 2 : dépilement vertical par groupe d'ancrage X ──
-  // Grouper par xNat arrondi (évite les groupes distincts dus à la virgule flottante)
-  const byX = new Map();
-  for (const item of items) {
-    const key = item.xNat;
-    if (!byX.has(key)) byX.set(key, []);
-    byX.get(key).push(item);
-  }
+  // ── Passe 2 : dépilement vertical avec fenêtre glissante horizontale ──
+  // N bandes vers la droite déterminées dynamiquement depuis CARD_W_PX.
+  // Deux événements sont co-dépilés si leur distance xNat < CARD_W_PX
+  // (leurs cartes se chevauchent horizontalement).
+  const CARD_W_PX = 220; // doit correspondre à --card-w
+  const placed = []; // { ev, ax, xNat, yNat, yFinal, peeked, stackDepth }
 
-  // Direction d'empilement : suit le sens de lecture de la frise.
-  // INVERT=true  (récent en haut) → trier DESC (ancien en bas = traité en premier),
-  //   pousser vers le HAUT (Y décroissant = direction présent).
-  //   → les événements récents s'empilent vers le haut autour de l'ancre = l'événement le plus ancien.
-  // INVERT=false (ancien en haut) → trier ASC (ancien en haut = traité en premier),
-  //   pousser vers le BAS (Y croissant = direction présent).
-  //   → logique symétrique.
-  const placed = []; // { ev, ax, xNat, yFinal, peeked, stackDepth }
-  for (const [, group] of byX) {
-    if (INVERT_TIMELINE) {
-      // ── Mode inversé : descending Y (ancien = grand Y, traité en premier) ──
-      group.sort((a, b) => b.yNat - a.yNat);
-      let cursor = +Infinity; // bord supérieur de la dernière carte placée
-      for (let i = 0; i < group.length; i++) {
-        const item = group[i];
-        let yFinal = item.yNat;
-        let peeked = false;
-        let stackDepth = 0;
+  if (INVERT_TIMELINE) {
+    // ── Mode inversé : ancien = grand Y, traité en premier ──
+    // Les événements récents (petit Y = haut) s'empilent vers le haut.
+    items.sort((a, b) => b.yNat - a.yNat);
 
+    for (const item of items) {
+      let yFinal = item.yNat;
+      let peeked = false;
+      let stackDepth = 0;
+
+      // Conflits horizontaux : cartes déjà placées dont la carte peut chevaucher celle-ci
+      const hConflicts = placed.filter(p => Math.abs(p.xNat - item.xNat) < CARD_W_PX);
+
+      if (hConflicts.length > 0) {
+        // Cursor = bord supérieur le plus haut parmi les conflits (carte la plus haute)
+        const cursor = Math.min(...hConflicts.map(p => p.yFinal));
         if (yFinal + CARD_EST_H > cursor - PEEK_GAP) {
-          // Collision vers le haut : comprimer et décaler vers le haut
-          yFinal = cursor - PEEK_GAP - (i === 0 ? CARD_EST_H : PEEK_H);
+          // Collision : décaler vers le haut en mode peeked
+          yFinal = cursor - PEEK_GAP - PEEK_H;
           peeked = true;
-          stackDepth = placed.filter(p => p.xNat === item.xNat && p.peeked).length;
+          stackDepth = hConflicts.filter(p => p.peeked).length;
         }
-
-        const cardH = peeked ? PEEK_H : CARD_EST_H;
-        cursor = yFinal;   // bord supérieur de cette carte = limite haute pour la prochaine
-        placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
       }
-    } else {
-      // ── Mode normal : ascending Y (ancien = petit Y, traité en premier) ──
-      group.sort((a, b) => a.yNat - b.yNat);
-      let cursor = -Infinity; // bas estimé de la dernière carte placée
-      for (let i = 0; i < group.length; i++) {
-        const item = group[i];
-        let yFinal = item.yNat;
-        let peeked = false;
-        let stackDepth = 0;
 
+      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
+    }
+  } else {
+    // ── Mode normal : ancien = petit Y, traité en premier ──
+    // Les événements récents (grand Y = bas) s'empilent vers le bas.
+    items.sort((a, b) => a.yNat - b.yNat);
+
+    for (const item of items) {
+      let yFinal = item.yNat;
+      let peeked = false;
+      let stackDepth = 0;
+
+      const hConflicts = placed.filter(p => Math.abs(p.xNat - item.xNat) < CARD_W_PX);
+
+      if (hConflicts.length > 0) {
+        const cursor = Math.max(...hConflicts.map(p => p.yFinal + (p.peeked ? PEEK_H : CARD_EST_H)));
         if (yFinal < cursor + PEEK_GAP) {
-          // Collision vers le bas : comprimer et décaler vers le bas
           yFinal = cursor + PEEK_GAP;
           peeked = true;
-          stackDepth = placed.filter(p => p.xNat === item.xNat && p.peeked).length;
+          stackDepth = hConflicts.filter(p => p.peeked).length;
         }
-
-        const cardH = peeked ? PEEK_H : CARD_EST_H;
-        cursor = yFinal + cardH;
-        placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
       }
+
+      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
     }
   }
 
@@ -2223,13 +2326,30 @@ function buildEvents_DOM(canvas) {
   for (const { ev, ax, xNat, yNat, yFinal, peeked, stackDepth } of placed) {
     const DOT_R = 7; // doit correspondre à --dot-r
 
+    // Refs sociétés liées à cet événement (pour surlignage sur hover bande)
+    const coIds = pAll(ev, 'ftmRef').join(' ');
+
     // ── Nœud dot — positionné sur la bande de la société ftmRef ──
     const xDot = evDotX(ev, ax);
     const dotNode = document.createElement('div');
     dotNode.className = 'ev-dot-node';
     dotNode.setAttribute('data-ev-id', ev.id);
+    if (coIds) dotNode.dataset.coIds = coIds;
     dotNode.style.left = xDot + 'px';
     dotNode.style.top  = yNat + 'px';
+
+    // ── Label date à gauche du dot ──
+    const dateStr  = eventDate(ev);
+    const endStr   = eventEndDate(ev);
+    const dateDisplay = endStr
+      ? `${formatDate(dateStr)} – ${formatDate(endStr)}`
+      : formatDate(dateStr);
+    if (dateStr) {
+      const dateLabel = document.createElement('div');
+      dateLabel.className = 'ev-dot-label';
+      dateLabel.textContent = dateDisplay;
+      dotNode.appendChild(dateLabel);
+    }
 
     // Segment bar pour événements à durée (ancré sur le dot)
     const endDate = eventEndDate(ev);
@@ -2253,14 +2373,16 @@ function buildEvents_DOM(canvas) {
     canvas.appendChild(dotNode);
 
     // ── Card anchor — colonne d'axe (xNat), position verticale décompressée ──
+    // Le coin haut-gauche de l'anchor est au centre du dot (yNat + DOT_R).
     const anchor = document.createElement('div');
     anchor.className = 'ev-anchor';
     anchor.id = `ev-${ev.id}`;
     anchor.setAttribute('data-axis', ev._resolvedAxis);
     anchor.setAttribute('data-dot-x', xDot);
     anchor.setAttribute('data-dot-y', yNat);
+    if (coIds) anchor.dataset.coIds = coIds;
     anchor.style.left = xNat + 'px';
-    anchor.style.top  = yFinal + 'px';
+    anchor.style.top  = (yFinal + DOT_R) + 'px';
 
     // Card
     const card = document.createElement('div');
@@ -2274,15 +2396,9 @@ function buildEvents_DOM(canvas) {
     }
 
     const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'), p1(ev,'amountCurrency')||p1(ev,'currency'));
-    const dateStr = eventDate(ev);
-    const endStr  = eventEndDate(ev);
-    const dateDisplay = endStr
-      ? `${formatDate(dateStr)} – ${formatDate(endStr)}`
-      : formatDate(dateStr);
 
     card.innerHTML = `
       <div class="ev-card-title">${esc(eventName(ev))}</div>
-      <div class="ev-card-date">${dateDisplay}</div>
       ${eventDesc(ev) ? `<div class="ev-card-desc">${esc(eventDesc(ev))}</div>` : ''}
       ${amount ? `<span class="ev-card-amount" style="color:${ax.color}">${esc(amount)}</span>` : ''}
       <div class="ev-card-schema">${ev.schema}</div>
@@ -2405,9 +2521,9 @@ function buildDotConnectors(svg) {
     const ax = AXIS_MAP[ev._resolvedAxis];
     if (!ax) continue;
 
-    // dot center → bord gauche de la colonne carte à hauteur dot
+    // dot center → coin haut-gauche de la carte (= centre du dot, new positioning)
     const x1 = xDot,  y1 = yDot  + DOT_R;
-    const x2 = xCard, y2 = yCard + DOT_R;
+    const x2 = xCard, y2 = yCard;
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', x1); line.setAttribute('y1', y1);
