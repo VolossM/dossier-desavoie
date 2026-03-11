@@ -1849,8 +1849,8 @@ function formatAmount(raw, currency) {
 /* ═══════════════════════════════════════════════════════════
    FtM PROPERTY HELPERS
 ═══════════════════════════════════════════════════════════ */
-const p1 = (e, k) => (e.properties?.[k] || [])[0] || null;
-const pAll = (e, k) => e.properties?.[k] || [];
+const p1 = (e, k) => (e?.properties?.[k] || [])[0] || null;
+const pAll = (e, k) => e?.properties?.[k] || [];
 
 function eventDate(e) {
   return p1(e,'date') || p1(e,'startDate') || p1(e,'incorporationDate') || null;
