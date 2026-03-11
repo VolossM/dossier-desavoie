@@ -29,13 +29,14 @@
   --violet:     #6b3fa0;
   --teal:       #1f7a78;
 
-  --font-display: Georgia, 'Times New Roman', serif;
+  --font-display: Georgia, 'Times New Roman', serif;   /* réservé à yr-label */
+  --font-card:    Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono:    ui-monospace, 'Cascadia Code', 'Consolas', 'Menlo', monospace;
   --font-ui:      system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --rail-w: 2px;
   --dot-r:  7px;
-  --card-w: 220px;
+  --card-w: 260px;
   --year-w: 56px;
   --pad-v:  18px;
 
@@ -321,6 +322,17 @@ body::before {
   user-select: none;
   flex: 1;
   padding-bottom: 12px;
+}
+/* Millésime horizontal (blocs suffisamment hauts) */
+.yr-label--horiz {
+  writing-mode: horizontal-tb;
+  transform: none;
+  text-align: center;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  padding: 6px 2px 0;
+  flex: none;
+  align-self: center;
 }
 
 /* ── Canvas: the scrollable timeline ── */
@@ -662,6 +674,7 @@ body::before {
   background: #fff;
   border: 1px solid var(--wire);
   border-radius: 4px;
+  border-left-width: 4px;
   padding: 0 0 0; /* aucun padding : coin haut-gauche sur le centre du dot, flush right+bottom */
   box-shadow: 0 2px 12px rgba(10,11,13,0.07), 0 1px 3px rgba(10,11,13,0.04);
   cursor: pointer;
@@ -683,8 +696,8 @@ body::before {
 
 /* Padding interne : uniquement left, et un léger top sur le titre */
 .ev-card-title {
-  font-family: var(--font-display);
-  font-size: 13.5px;
+  font-family: var(--font-card);
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.3;
   color: var(--ink);
@@ -701,6 +714,7 @@ body::before {
   padding-left: 7px;
 }
 .ev-card-desc {
+  font-family: var(--font-card);
   font-size: 11px;
   color: var(--dust2);
   line-height: 1.55;
@@ -797,6 +811,154 @@ body::before {
   opacity: 0.6;
 }
 
+
+/* ═══════════════════════════════════════════
+   FORMES DE DOTS PAR SCHEMA / TYPE
+═══════════════════════════════════════════ */
+/* CourtCase — carré arrondi (border-radius: 3px) */
+.ev-dot--court {
+  border-radius: 3px;
+}
+/* Event RJ — carré marron, taille légèrement augmentée */
+.ev-dot--rj {
+  border-radius: 3px;
+  background: #7a2e14 !important;
+  border-color: rgba(255,255,255,0.3);
+  width:  calc(var(--dot-r) * 2.1);
+  height: calc(var(--dot-r) * 2.1);
+}
+/* Event LJ — carré noir */
+.ev-dot--lj {
+  border-radius: 3px;
+  background: #111111 !important;
+  border-color: rgba(255,255,255,0.2);
+  width:  calc(var(--dot-r) * 2.1);
+  height: calc(var(--dot-r) * 2.1);
+}
+/* Directorship — losange (carré 45°) */
+.ev-dot--directorship {
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(45deg);
+  width:  calc(var(--dot-r) * 1.5);
+  height: calc(var(--dot-r) * 1.5);
+  opacity: 0.85;
+}
+.ev-dot--directorship:hover {
+  transform: translateX(-50%) rotate(45deg) scale(1.35);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.30);
+}
+/* Ownership — triangle (pseudo-clip) */
+.ev-dot--ownership {
+  border-radius: 50% 50% 0 50%;
+  transform: translateX(-50%) rotate(-45deg);
+  opacity: 0.82;
+}
+.ev-dot--ownership:hover {
+  transform: translateX(-50%) rotate(-45deg) scale(1.35);
+}
+/* Document — carré à coins coupés */
+.ev-dot--document {
+  border-radius: 3px 0 3px 3px;
+  opacity: 0.88;
+}
+.ev-dot--document::after {
+  content: '';
+  position: absolute;
+  top: -1px; right: -1px;
+  width: 5px; height: 5px;
+  background: var(--smoke);
+  border-left: 1px solid rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.4);
+}
+/* Payment — cercle vide, plus petit */
+.ev-dot--payment {
+  background: transparent !important;
+  border: 2.5px solid currentColor;
+  width:  calc(var(--dot-r) * 1.6);
+  height: calc(var(--dot-r) * 1.6);
+  box-shadow: none;
+}
+
+/* ═══════════════════════════════════════════
+   STYLES DE CARTES PAR TYPE PROCÉDURAL / SCHEMA
+═══════════════════════════════════════════ */
+/* Redressement judiciaire — fond marron chaud */
+.ev-card--rj {
+  background: #6b2710;
+  border-color: rgba(255,255,255,0.10);
+  border-left-color: #bf7040 !important; /* barre gauche plus claire */
+}
+.ev-card--rj .ev-card-title,
+.ev-card--rj .ev-card-desc,
+.ev-card--rj .ev-card-date,
+.ev-card--rj .ev-card-schema { color: rgba(255,235,215,0.92); }
+.ev-card--rj .ev-card-amount { color: #ffd080 !important; }
+.ev-card--rj .ev-dot-label   { color: #d4905a; }
+
+/* Liquidation judiciaire — fond charbon */
+.ev-card--lj {
+  background: #111216;
+  border-color: rgba(255,255,255,0.07);
+  border-left-color: #505060 !important;
+}
+.ev-card--lj .ev-card-title,
+.ev-card--lj .ev-card-desc,
+.ev-card--lj .ev-card-date,
+.ev-card--lj .ev-card-schema { color: rgba(230,225,220,0.90); }
+.ev-card--lj .ev-card-amount { color: #c8b8f0 !important; }
+
+/* Directorship — sans fond ni bordure (sauf left) */
+.ev-card--directorship {
+  background: transparent;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+.ev-card--directorship .ev-card-title,
+.ev-card--directorship .ev-card-desc {
+  text-shadow: 0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(255,255,255,0.6);
+  color: var(--ink);
+}
+
+/* Ownership — sans fond, légère teinte */
+.ev-card--ownership {
+  background: rgba(255,255,255,0.45);
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+/* Payment — transparent comme Directorship */
+.ev-card--payment {
+  background: transparent;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+.ev-card--payment .ev-card-title,
+.ev-card--payment .ev-card-amount {
+  text-shadow: 0 0 6px rgba(255,255,255,0.9), 0 0 10px rgba(255,255,255,0.5);
+}
+
+/* Document — fond parchemin discret */
+.ev-card--document {
+  background: #faf6ec;
+  border-color: rgba(180,160,100,0.3);
+}
+
+/* CourtCase — fond très légèrement teinté selon l'axe (borde left seule couleur forte) */
+.ev-card--court {
+  background: #f8f4ff;
+  border-color: rgba(80,40,160,0.15);
+}
+
+/* Alert : toujours prioritaire sur les variantes ci-dessus */
+.ev-card.is-alert {
+  border-left-color: var(--red) !important;
+}
 /* muted state */
 .ev-anchor.axis-hidden { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 
@@ -1537,12 +1699,12 @@ const CANVAS_FIXED_H_BASE = 6200;  // hauteur de base (px) — CANVAS_FIXED_H = 
 let   CANVAS_FIXED_H      = 6200;  // hauteur courante (recalculée à chaque rebuild)
 
 // ── Mise en page des bandes de sociétés ──
-const BAND_W      = 16;   // largeur d'une lane de société (px)
+const BAND_W      = 22;   // largeur d'une lane de société (px)
 const BAND_GAP    =  6;   // espace entre axes (inter-axe)
 const AXIS_GAP    = 30;   // espace supplémentaire entre axes narratifs distincts
 const CARD_OFFSET = 10;   // espace entre bord droit de la bande société et le dot
 const AXIS_LEFT   = 32;   // marge gauche du canvas
-const CARD_EST_H  = 90;   // hauteur estimée d'une carte complète (px, premier passage)
+const CARD_EST_H  = 78;   // hauteur estimée d'une carte complète (px, premier passage)
 const PEEK_H      = 40;   // hauteur minimale visible d'une carte compressée
 const PEEK_GAP    = 4;    // écart supplémentaire entre cartes compressées
 // Moitié de la hauteur de la première ligne du titre (font-size 13.5px × line-height 1.3 / 2).
@@ -1738,6 +1900,29 @@ function isAlert(e) {
   const a = p1(e,'alert');
   return a === 'true' || a === true;
 }
+/* Retourne 'rj', 'lj', ou null selon le contenu du nom/description de l'événement. */
+function eventProcType(e) {
+  const text = [...pAll(e,'name'), ...pAll(e,'description')].join(' ');
+  if (/liquidation judiciaire/i.test(text))   return 'lj';
+  if (/redressement judiciaire/i.test(text))  return 'rj';
+  return null;
+}
+
+/* Retourne la classe CSS du schéma (dot + carte). */
+function schemaClass(e) {
+  const pt = eventProcType(e);
+  if (pt) return pt;  // 'rj' | 'lj'
+  switch (e.schema) {
+    case 'CourtCase':    return 'court';
+    case 'Directorship': return 'directorship';
+    case 'Ownership':    return 'ownership';
+    case 'Payment':      return 'payment';
+    case 'Document':     return 'document';
+    default:             return null;
+  }
+}
+
+
 
 /* ═══════════════════════════════════════════════════════════
    DEDUPLICATION / MERGE
@@ -2055,11 +2240,21 @@ function buildYearSpine() {
     block.style.height = height + 'px';
     block.setAttribute('data-year', y);
 
+    // Zèbre discret sur les blocs d'années impaires
+    if (y % 2 === 0) block.style.background = 'rgba(0,0,0,0.018)';
+
     const step = snapStep(height > 0 ? MIN_LABEL_H / height : 100);
     if (y % step === 0) {
       const label = document.createElement('div');
-      label.className = 'yr-label';
-      label.textContent = y;
+      if (height >= 32) {
+        // Assez de place : label horizontal centré
+        label.className = 'yr-label yr-label--horiz';
+        label.textContent = y;
+      } else {
+        // Compact : label vertical habituel
+        label.className = 'yr-label';
+        label.textContent = y;
+      }
       block.appendChild(label);
     }
     inner.appendChild(block);
@@ -2674,8 +2869,12 @@ function buildEvents_DOM(canvas) {
     }
 
     const dot = document.createElement('div');
-    dot.className = 'ev-dot' + (isAlert(ev) ? ' alert-dot' : '');
-    dot.style.background = ax.color;
+    const sCls = schemaClass(ev);
+    dot.className = ['ev-dot', sCls ? 'ev-dot--' + sCls : '', isAlert(ev) ? 'alert-dot' : '']
+      .filter(Boolean).join(' ');
+    // Dot payment : couleur via CSS currentColor sur border
+    if (sCls !== 'payment') dot.style.background = ax.color;
+    else dot.style.color = ax.color;
     dotNode.appendChild(dot);
 
     canvas.appendChild(dotNode);
@@ -2717,7 +2916,11 @@ function buildEvents_DOM(canvas) {
 
     // Card
     const card = document.createElement('div');
-    const cls = ['ev-card', 'right', peeked ? 'peeked' : '', isAlert(ev) ? 'is-alert' : '']
+    const sCls2 = schemaClass(ev);
+    const cls = ['ev-card', 'right',
+                 sCls2 ? 'ev-card--' + sCls2 : '',
+                 peeked ? 'peeked' : '',
+                 isAlert(ev) ? 'is-alert' : '']
       .filter(Boolean).join(' ');
     card.className = cls;
     card.style.borderLeftColor = ax.color;
@@ -2731,8 +2934,7 @@ function buildEvents_DOM(canvas) {
     card.innerHTML = `
       <div class="ev-card-title">${esc(eventName(ev))}</div>
       ${eventDesc(ev) ? `<div class="ev-card-desc">${esc(eventDesc(ev))}</div>` : ''}
-      ${amount ? `<span class="ev-card-amount" style="color:${ax.color}">${esc(amount)}</span>` : ''}
-      <div class="ev-card-schema">${ev.schema}</div>
+      ${amount ? `<span class="ev-card-amount">${esc(amount)}</span>` : ''}
     `;
 
     // Sources : modal uniquement (supprimées des cartes)
@@ -2935,8 +3137,12 @@ function buildPersonCdpLines(svg) {
     label.setAttribute('font-size', '7.5');
     label.setAttribute('font-family', 'var(--font-mono, monospace)');
     label.setAttribute('letter-spacing', '0.06em');
-    label.setAttribute('opacity', '0.82');
+    label.setAttribute('opacity', '0.88');
     label.setAttribute('pointer-events', 'none');
+    label.setAttribute('paint-order', 'stroke fill');
+    label.setAttribute('stroke', 'rgba(242,241,238,0.92)');
+    label.setAttribute('stroke-width', '3');
+    label.setAttribute('stroke-linejoin', 'round');
     label.classList.add('person-cdp-label');
     label.textContent = pName.toUpperCase() + ' — CDP';
     svg.appendChild(label);
