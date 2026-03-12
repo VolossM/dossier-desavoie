@@ -1566,6 +1566,100 @@ body::before {
   text-overflow: ellipsis;
   max-width: 118px;
 }
+
+/* ── Axes dépliables dans le legend-panel ── */
+.lgd-axis-group {
+  list-style: none;
+}
+details.lgd-axis-group summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 3px;
+  transition: background 0.12s;
+}
+details.lgd-axis-group summary::-webkit-details-marker { display: none; }
+details.lgd-axis-group summary:hover { background: rgba(0,0,0,0.04); }
+.lgd-axis-toggle {
+  font-size: 8px;
+  color: var(--dust);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  line-height: 1;
+  margin-left: auto;
+}
+details.lgd-axis-group[open] .lgd-axis-toggle { transform: rotate(90deg); }
+.lgd-axis-count {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--dust);
+  flex-shrink: 0;
+}
+.lgd-axis-eye {
+  font-size: 10px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 2px;
+  transition: opacity 0.15s, background 0.12s;
+}
+.lgd-axis-eye:hover { opacity: 1; background: rgba(0,0,0,0.08); }
+details.lgd-axis-group.muted-axis > summary .lgd-axis-eye { opacity: 1; color: var(--red); }
+details.lgd-axis-group.muted-axis > summary .lgd-lbl { opacity: 0.35; text-decoration: line-through; }
+.lgd-co-list {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 14px 6px 32px;
+  gap: 2px;
+}
+.lgd-co-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 2px 4px 2px 2px;
+  transition: background 0.12s;
+}
+.lgd-co-item:hover { background: rgba(0,0,0,0.05); }
+.lgd-co-eye {
+  font-size: 9px;
+  flex-shrink: 0;
+  opacity: 0.45;
+  width: 13px;
+  text-align: center;
+  transition: opacity 0.15s;
+}
+.lgd-co-item:hover .lgd-co-eye { opacity: 0.85; }
+.lgd-co-item.co-muted .lgd-co-eye { opacity: 1; color: var(--red); }
+.lgd-co-item.co-muted .lgd-co-name { opacity: 0.32; text-decoration: line-through; }
+.lgd-co-name {
+  font-size: 9.5px;
+  color: var(--ink2);
+  opacity: 0.80;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+  line-height: 1.3;
+}
+.lgd-co-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+/* Bande masquée */
+.co-band.co-muted {
+  opacity: 0.07;
+  pointer-events: none;
+}
 </style>
 </head>
 <body>
@@ -1775,6 +1869,7 @@ let ENTITIES  = {};        // id → entity (deduplicated, merged)
 let EVENTS    = [];        // event-bearing entities, sorted by date
 let AXIS_MAP  = {};        // axisId → axis config
 let MUTED_AXES = new Set();
+let MUTED_COS  = new Set();  // coIds des bandes company masquées individuellement
 let SHOW_CONNECTORS = false;
 let CANVAS_WIDTH = 0;
 let CANVAS_HEIGHT = 0;
@@ -1978,12 +2073,16 @@ function computeLayout() {
   const axisCompanies = {};
   for (const ax of Object.values(AXIS_MAP)) axisCompanies[ax.id] = [];
 
+  const _seenCoIds = new Set();  // garde anti-doublon : chaque coId ne doit apparaître qu'une fois
   for (const ent of Object.values(ENTITIES)) {
     if (ent.schema !== 'Company') continue;
     // Exclure les doublons explicitement marqués _deprecated (noms antérieurs d'une entité
     // canonique — ex. Sunny Meadows / Gaia Resources / GAIA Capital → company-circle-square).
     // Ces entités ne génèrent pas de bandes mais restent référençables pour entityAxis().
     if (ent._deprecated && ent._deprecated.length) continue;
+    // Anti-doublon strict : un id ne génère jamais deux bandes (guard en cas de JSONL croisés)
+    if (_seenCoIds.has(ent.id)) continue;
+    _seenCoIds.add(ent.id);
     const axId = p1(ent, 'axis') || Object.keys(AXIS_MAP)[0];
     if (!axisCompanies[axId]) axisCompanies[axId] = [];
     axisCompanies[axId].push(ent);
@@ -3230,7 +3329,17 @@ function applyFilters() {
       hiddenBySearch = !hay.includes(needle);
     }
 
-    el.classList.toggle('axis-hidden', hiddenByAxis || hiddenBySchema || hiddenBySearch);
+    // Critère 4 : toutes les companies liées à cet événement sont masquées
+    let hiddenByCo = false;
+    if (MUTED_COS.size > 0) {
+      const evCoIds = pAll(ev, 'ftmRef');
+      // Masquer seulement si l'événement a au moins une company ET que toutes sont masquées
+      if (evCoIds.length > 0 && evCoIds.every(id => MUTED_COS.has(id))) {
+        hiddenByCo = true;
+      }
+    }
+
+    el.classList.toggle('axis-hidden', hiddenByAxis || hiddenBySchema || hiddenBySearch || hiddenByCo);
   });
 }
 
@@ -3301,6 +3410,25 @@ function toggleAxis(axId) {
   });
 
   applyFilters(); // unifié avec les autres filtres
+}
+
+/* Masquer / afficher une bande company individuelle. */
+function toggleCo(coId) {
+  if (MUTED_COS.has(coId)) MUTED_COS.delete(coId);
+  else MUTED_COS.add(coId);
+
+  // Bande DOM
+  const band = document.getElementById('co-' + coId);
+  if (band) band.classList.toggle('co-muted', MUTED_COS.has(coId));
+
+  // Item dans le panel légende
+  document.querySelectorAll(`.lgd-co-item[data-co-id="${coId}"]`).forEach(el => {
+    el.classList.toggle('co-muted', MUTED_COS.has(coId));
+    const eye = el.querySelector('.lgd-co-eye');
+    if (eye) eye.textContent = MUTED_COS.has(coId) ? '✕' : '◉';
+  });
+
+  applyFilters();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4019,7 +4147,7 @@ function buildLegendPanel() {
   if (!panel) return;
   panel.innerHTML = '';
 
-  // ── Section : axes narratifs ──
+  // ── Section : axes narratifs dépliables avec liste des companies ──
   if (Object.keys(AXIS_MAP).length) {
     const sec = document.createElement('div');
     sec.className = 'lgd-section';
@@ -4028,14 +4156,40 @@ function buildLegendPanel() {
     title.textContent = 'Axes narratifs';
     sec.appendChild(title);
 
+    // Index companies par axe depuis _companyLayout (source de vérité post-déduplication)
+    const cosByAxis = {};
+    for (const [coId, layout] of Object.entries(_companyLayout)) {
+      const axId = layout.axisId;
+      if (!cosByAxis[axId]) cosByAxis[axId] = [];
+      cosByAxis[axId].push(coId);
+    }
+
     for (const ax of Object.values(AXIS_MAP)) {
-      const entry = document.createElement('div');
-      entry.className = 'lgd-entry';
-      entry.title = ax.sublabel || ax.label;
+      const coIds = cosByAxis[ax.id] || [];
+      // Trier par nom
+      coIds.sort((a, b) => {
+        const na = p1(ENTITIES[a], 'name') || a;
+        const nb = p1(ENTITIES[b], 'name') || b;
+        return na.localeCompare(nb, 'fr');
+      });
+
+      // <details> dépliable
+      const details = document.createElement('details');
+      details.className = 'lgd-axis-group';
+      if (MUTED_AXES.has(ax.id)) details.classList.add('muted-axis');
+      details.dataset.axisId = ax.id;
+
+      // <summary> = ligne principale de l'axe
+      const summary = document.createElement('summary');
+
+      // Dot couleur
       const dot = document.createElement('div');
       dot.className = 'lgd-swatch-dot';
       dot.style.background = ax.color;
+
+      // Label + sous-label
       const txt = document.createElement('div');
+      txt.style.cssText = 'flex:1;min-width:0;';
       const lbl = document.createElement('div');
       lbl.className = 'lgd-lbl';
       lbl.style.color = ax.color;
@@ -4047,9 +4201,85 @@ function buildLegendPanel() {
         sub.textContent = ax.sublabel;
         txt.appendChild(sub);
       }
-      entry.appendChild(dot);
-      entry.appendChild(txt);
-      sec.appendChild(entry);
+
+      // Compteur companies
+      const cnt = document.createElement('span');
+      cnt.className = 'lgd-axis-count';
+      cnt.textContent = coIds.length ? `${coIds.length}` : '';
+
+      // Œil mute-axe
+      const eye = document.createElement('span');
+      eye.className = 'lgd-axis-eye';
+      eye.title = 'Afficher / masquer l'axe';
+      eye.textContent = MUTED_AXES.has(ax.id) ? '✕' : '◉';
+      eye.addEventListener('click', ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        toggleAxis(ax.id);
+        eye.textContent = MUTED_AXES.has(ax.id) ? '✕' : '◉';
+        details.classList.toggle('muted-axis', MUTED_AXES.has(ax.id));
+      });
+
+      // Chevron d'ouverture
+      const chev = document.createElement('span');
+      chev.className = 'lgd-axis-toggle';
+      chev.textContent = '▶';
+
+      summary.appendChild(dot);
+      summary.appendChild(txt);
+      if (coIds.length) summary.appendChild(cnt);
+      summary.appendChild(eye);
+      if (coIds.length) summary.appendChild(chev);
+      details.appendChild(summary);
+
+      // Liste des companies (visible quand <details open>)
+      if (coIds.length) {
+        const list = document.createElement('div');
+        list.className = 'lgd-co-list';
+
+        for (const coId of coIds) {
+          const co = ENTITIES[coId];
+          if (!co) continue;
+          const coName = p1(co, 'name') || coId;
+          const status = p1(co, 'status') || 'default';
+
+          const item = document.createElement('div');
+          item.className = 'lgd-co-item' + (MUTED_COS.has(coId) ? ' co-muted' : '');
+          item.dataset.coId = coId;
+          item.title = coName;
+
+          const coEye = document.createElement('span');
+          coEye.className = 'lgd-co-eye';
+          coEye.textContent = MUTED_COS.has(coId) ? '✕' : '◉';
+
+          const coLbl = document.createElement('span');
+          coLbl.className = 'lgd-co-name';
+          coLbl.textContent = coName;
+
+          // Pastille statut
+          const statusColors = {
+            rj: '#8B4513', lj: '#1a1a1a', active: '#1a7a46',
+            dissolved: '#888', insolvent: '#c0531a', dormant: '#9a9590',
+          };
+          const statusDot = document.createElement('div');
+          statusDot.className = 'lgd-co-status-dot';
+          statusDot.style.background = statusColors[status] || '#ccc';
+          statusDot.title = status;
+
+          item.appendChild(coEye);
+          item.appendChild(coLbl);
+          item.appendChild(statusDot);
+
+          item.addEventListener('click', () => {
+            toggleCo(coId);
+            // Synchroniser l'œil et la classe de cet item (toggleCo le fait déjà via querySelectorAll)
+          });
+
+          list.appendChild(item);
+        }
+        details.appendChild(list);
+      }
+
+      sec.appendChild(details);
     }
     panel.appendChild(sec);
   }
