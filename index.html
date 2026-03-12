@@ -4210,7 +4210,7 @@ function buildLegendPanel() {
       // Œil mute-axe
       const eye = document.createElement('span');
       eye.className = 'lgd-axis-eye';
-      eye.title = 'Afficher / masquer l'axe';
+      eye.title = "Afficher / masquer l\u2019axe";
       eye.textContent = MUTED_AXES.has(ax.id) ? '✕' : '◉';
       eye.addEventListener('click', ev => {
         ev.preventDefault(); ev.stopPropagation();
