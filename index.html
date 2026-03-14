@@ -3432,13 +3432,16 @@ function applyFilters() {
       hiddenByAxis || hiddenBySchema || hiddenBySearch || hiddenByCo || hiddenByStatus);
   });
 
-  // Bandes co-band : masquer selon statut
+  // Bandes co-band : masquer selon company individuelle, axe ou statut
   document.querySelectorAll('.co-band').forEach(band => {
-    const coId = band.id.replace('co-', '');
-    const co   = ENTITIES[coId];
-    const st   = p1(co, 'status') || 'default';
-    band.classList.toggle('co-muted',
-      MUTED_COS.has(coId) || (MUTED_STATUSES.size > 0 && MUTED_STATUSES.has(st)));
+    const coId   = band.id.replace('co-', '');
+    const co     = ENTITIES[coId];
+    const st     = p1(co, 'status') || 'default';
+    const axisId = _companyLayout[coId]?.axisId;
+    const muted  = MUTED_COS.has(coId)
+      || (axisId && MUTED_AXES.has(axisId))
+      || (MUTED_STATUSES.size > 0 && MUTED_STATUSES.has(st));
+    band.classList.toggle('co-muted', muted);
   });
 }
 
