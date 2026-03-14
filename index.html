@@ -36,7 +36,8 @@
 
   --rail-w: 2px;
   --dot-r:  7px;
-  --card-w: 260px;
+  --card-max-w: 520px;   /* largeur maximale des cartes adaptatives */
+  --card-w: 520px;        /* alias de compatibilité — utiliser --card-max-w */
   --year-w: 56px;
   --pad-v:  18px;
 
@@ -144,7 +145,7 @@ body::before {
 
 /* ── Tablette paysage / petite tablette ─────────────────── */
 @media (max-width: 768px) {
-  :root { --card-w: 190px; }
+  :root { --card-max-w: 320px; --card-w: 320px; }
   .hd-axes { overflow-x: auto; scrollbar-width: none; }
   .hd-axes::-webkit-scrollbar { display: none; }
 }
@@ -156,7 +157,8 @@ body::before {
     --hd-h:   44px;
     --ib-h:   44px;   /* zone tactile confortable */
     --year-w: 32px;
-    --card-w: 170px;
+    --card-max-w: 220px;
+    --card-w: 220px;
     --dot-r:  9px;    /* cibles de tap plus larges */
   }
 
@@ -669,7 +671,9 @@ body::before {
 /* The floating card */
 .ev-card {
   position: absolute;
-  width: var(--card-w);
+  width: max-content;
+  min-width: 110px;
+  max-width: var(--card-max-w);
   top: 0;
   background: #fff;
   border: 1px solid var(--wire);
@@ -703,6 +707,9 @@ body::before {
   color: var(--ink);
   margin-bottom: 2px;
   padding-left: 7px;
+  padding-right: 7px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .ev-card-date {
   font-family: var(--font-mono);
@@ -723,6 +730,7 @@ body::before {
   -webkit-box-orient: vertical;
   overflow: hidden;
   padding-left: 7px;
+  padding-right: 7px;
 }
 .ev-card-amount {
   font-family: var(--font-mono);
@@ -731,6 +739,7 @@ body::before {
   display: block;
   margin-top: 5px;
   padding-left: 7px;
+  padding-right: 7px;
 }
 .ev-card-schema {
   font-family: var(--font-mono);
@@ -2162,7 +2171,7 @@ function computeLayout() {
   }
 
   // Recalculer CANVAS_WIDTH pour englober toutes les bandes + une carte à droite
-  const CARD_SPACE = 220 + 32; // --card-w + marge
+  const CARD_SPACE = 520 + 32; // max card width + marge
   CANVAS_WIDTH = Math.max(CANVAS_MIN_WIDTH, cursor + CARD_SPACE);
 }
 
@@ -2881,9 +2890,44 @@ function evDotX(ev, ax) {
   return ax._xStart + Math.floor((ax._wPx || BAND_W) / 2);
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   ESTIMATION LARGEUR CARTE (avant rendu DOM)
+   Approximation : 7px/caractère à 13px Inter + marges
+   Utilisé par le stacking pour détecter les chevauchements
+   horizontaux avec la largeur réelle de chaque carte.
+═══════════════════════════════════════════════════════════ */
+const CARD_CHAR_PX   = 7.0;   // px par caractère à 13px Inter
+const CARD_PAD_H     = 14;    // padding-left + padding-right
+const CARD_BORDER_L  = 4;     // border-left-width
+const CARD_MIN_W_EST = 110;
+function estimateCardW(ev) {
+  // Largeur estimée = longueur du contenu le plus large × CHAR_PX,
+  // clampée à [CARD_MIN_W_EST, CARD_MAX_W_EST].
+  // Le max-width CSS sera lu depuis --card-max-w si disponible.
+  const CARD_MAX_W_EST = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--card-max-w')
+  ) || 520;
+
+  const title  = eventName(ev) || '';
+  const desc   = eventDesc(ev) || '';
+  const amount = formatAmount(p1(ev,'amount')||p1(ev,'amountExpected'),
+                              p1(ev,'amountCurrency')||p1(ev,'currency')) || '';
+  // Chaque élément contribue à la largeur max de la carte
+  // (la carte est width:max-content → elle prend la largeur du plus long enfant non-wrappable)
+  // Pour le titre (13px, wrappable) : on utilise sqrt(len) × char_px pour approcher
+  // la largeur effective après wrapping éventuel, mais au premier passage on suppose 1 ligne.
+  const wTitle  = title.length  * CARD_CHAR_PX;
+  const wDesc   = desc.length   * 6.3;   // 11px Inter ≈ 6.3px/char
+  const wAmount = amount.length * 7.5;   // monospace 12px
+  const wMax = Math.max(wTitle, wDesc, wAmount);
+  const raw = Math.round(wMax + CARD_PAD_H + CARD_BORDER_L);
+  return Math.max(CARD_MIN_W_EST, Math.min(CARD_MAX_W_EST, raw));
+}
+
 function buildEvents_DOM(canvas) {
   // ── Passe 1 : calculer le X naturel et le Y naturel de chaque événement ──
-  const items = []; // { ev, ax, xNat, yNat }
+  const items = []; // { ev, ax, xNat, yNat, wPx }
   for (const ev of EVENTS) {
     const ax = AXIS_MAP[ev._resolvedAxis];
     if (!ax) continue;
@@ -2893,21 +2937,23 @@ function buildEvents_DOM(canvas) {
     // + CARD_OFFSET. Chaque événement s'aligne sur sa propre société, non sur l'axe.
     const xDotNat = evDotX(ev, ax);
     const xNat = xDotNat + CARD_OFFSET;
-    items.push({ ev, ax, xNat: Math.round(xNat), yNat });
+    const wPx  = estimateCardW(ev);
+    items.push({ ev, ax, xNat: Math.round(xNat), yNat, wPx });
   }
 
-  // ── Passe 2 : dépilement vertical avec fenêtre glissante horizontale ──
-  // N bandes vers la droite déterminées dynamiquement depuis CARD_W_PX.
-  // Deux événements sont co-dépilés si leur distance xNat < CARD_W_PX
-  // (leurs cartes se chevauchent horizontalement).
-  // CARD_W_PX lu sur l'élément racine pour coller à la variable CSS --card-w au zoom courant.
-  const CARD_W_PX = parseFloat(getComputedStyle(document.documentElement)
-                        .getPropertyValue('--card-w')) || 220;
-  const placed = []; // { ev, ax, xNat, yNat, yFinal, peeked, stackDepth }
+  // ── Passe 2 : dépilement vertical avec détection de chevauchement réel ──
+  // Chaque carte a sa propre largeur estimée (estimateCardW).
+  // Deux cartes se chevauchent horizontalement si leurs plages [xNat, xNat+wPx] se croisent.
+  // placed stocke wPx pour chaque carte déjà positionnée.
+  const placed = []; // { ev, ax, xNat, yNat, yFinal, peeked, stackDepth, wPx }
+
+  // Prédicat : deux cartes se chevauchent-elles horizontalement ?
+  function hOverlap(a, b) {
+    return a.xNat < b.xNat + b.wPx && b.xNat < a.xNat + a.wPx;
+  }
 
   if (INVERT_TIMELINE) {
     // ── Mode inversé : ancien = grand Y, traité en premier ──
-    // Les événements récents (petit Y = haut) s'empilent vers le haut.
     items.sort((a, b) => b.yNat - a.yNat);
 
     for (const item of items) {
@@ -2915,25 +2961,22 @@ function buildEvents_DOM(canvas) {
       let peeked = false;
       let stackDepth = 0;
 
-      // Conflits horizontaux : cartes déjà placées dont la carte peut chevaucher celle-ci
-      const hConflicts = placed.filter(p => Math.abs(p.xNat - item.xNat) < CARD_W_PX);
+      const hConflicts = placed.filter(p => hOverlap(item, p));
 
       if (hConflicts.length > 0) {
-        // Cursor = bord supérieur le plus haut parmi les conflits (carte la plus haute)
         const cursor = Math.min(...hConflicts.map(p => p.yFinal));
         if (yFinal + CARD_EST_H > cursor - PEEK_GAP) {
-          // Collision : décaler vers le haut en mode peeked
           yFinal = cursor - PEEK_GAP - PEEK_H;
           peeked = true;
           stackDepth = hConflicts.filter(p => p.peeked).length;
         }
       }
 
-      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
+      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat,
+                    yFinal, peeked, stackDepth, wPx: item.wPx });
     }
   } else {
     // ── Mode normal : ancien = petit Y, traité en premier ──
-    // Les événements récents (grand Y = bas) s'empilent vers le bas.
     items.sort((a, b) => a.yNat - b.yNat);
 
     for (const item of items) {
@@ -2941,7 +2984,7 @@ function buildEvents_DOM(canvas) {
       let peeked = false;
       let stackDepth = 0;
 
-      const hConflicts = placed.filter(p => Math.abs(p.xNat - item.xNat) < CARD_W_PX);
+      const hConflicts = placed.filter(p => hOverlap(item, p));
 
       if (hConflicts.length > 0) {
         const cursor = Math.max(...hConflicts.map(p => p.yFinal + (p.peeked ? PEEK_H : CARD_EST_H)));
@@ -2952,7 +2995,8 @@ function buildEvents_DOM(canvas) {
         }
       }
 
-      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat, yFinal, peeked, stackDepth });
+      placed.push({ ev: item.ev, ax: item.ax, xNat: item.xNat, yNat: item.yNat,
+                    yFinal, peeked, stackDepth, wPx: item.wPx });
     }
   }
 
