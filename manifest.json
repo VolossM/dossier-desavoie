@@ -105,28 +105,28 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "b54b07d4b1494ce9eaf0cacba147c31eba4b95eca461f1cf5f503e64ee25f1ad",
-      "version": 40,
-      "size": 201489,
-      "deployed": "2026-03-12T15:36:52Z"
+      "sha256": "88ad710886fbd54b01eb4e01f25a36b9376cc7cc7a02cfd6f6cad7bbf99395f2",
+      "version": 47,
+      "size": 199537,
+      "deployed": "2026-03-14T20:12:36Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "c5c34f576184a7637779ffe0dc7991b3a23c92173926eaab305f8460efc85761",
-      "version": 38,
-      "size": 276580,
-      "deployed": "2026-03-12T15:36:52Z"
+      "sha256": "0bc31fdb5813f7c2ff2ebc401820382a8d4ea769a79ef4f9723621d50ca99690",
+      "version": 45,
+      "size": 584098,
+      "deployed": "2026-03-14T20:12:36Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "2d5f3527550b500d38129963b8a9533bd5521b9180a1089c955af318074c220a",
-      "version": 37,
-      "size": 28045,
-      "deployed": "2026-03-12T15:36:52Z"
+      "sha256": "b05377f0d7ca7be0ba5f26b13410831ea50e89962417ac1c722495b790278353",
+      "version": 44,
+      "size": 62121,
+      "deployed": "2026-03-14T20:12:36Z"
     },
     {
       "path": "data/shams_indonesie.ftm.jsonl",
@@ -158,11 +158,11 @@
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
-      "sha256": "8dfcd9df0e796c0aa0b648c58d07984bb95e189be072173ca13cabf30b142581",
-      "version": 39,
-      "size": 58893,
-      "deployed": "2026-03-12T22:44:33Z"
+      "sha256": "fc20b5bb6cd3d21e78af695b3d0065a0c749323eae65a56ea2b68077809728bf",
+      "version": 46,
+      "size": 96339,
+      "deployed": "2026-03-14T20:12:36Z"
     }
   ],
-  "_last_deploy": "2026-03-12T22:44:33Z"
+  "_last_deploy": "2026-03-14T20:12:36Z"
 }

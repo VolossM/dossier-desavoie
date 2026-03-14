@@ -1567,6 +1567,22 @@ body::before {
   max-width: 118px;
 }
 
+
+/* ── Entrées de légende cliquables (statuts, schémas, visuels) ── */
+.lgd-entry.toggleable {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  transition: background 0.12s, opacity 0.15s;
+}
+.lgd-entry.toggleable:hover { background: rgba(0,0,0,0.05); }
+.lgd-entry.toggleable.lgd-muted .lgd-lbl {
+  opacity: 0.32;
+  text-decoration: line-through;
+}
+.lgd-entry.toggleable.lgd-muted .lgd-swatch,
+.lgd-entry.toggleable.lgd-muted .lgd-icon { opacity: 0.22; }
 /* ── Axes dépliables dans le legend-panel ── */
 .lgd-axis-group {
   list-style: none;
@@ -1660,6 +1676,9 @@ details.lgd-axis-group.muted-axis > summary .lgd-lbl { opacity: 0.35; text-decor
   opacity: 0.07;
   pointer-events: none;
 }
+.ev-dot.visually-hidden-alert { animation: none !important; }
+.ev-card.is-alert.visually-hidden-alert .ev-card-title::before { display: none; }
+
 </style>
 </head>
 <body>
@@ -3299,7 +3318,19 @@ function buildHeaderAxes() {
 /* ═══════════════════════════════════════════════════════════
    FILTRES : axe, schéma, texte
 ═══════════════════════════════════════════════════════════ */
-let MUTED_SCHEMAS = new Set();
+let MUTED_SCHEMAS  = new Set();
+let MUTED_STATUSES = new Set();  // statuts co-band masqués (rj, lj, active, …)
+let VISUAL_FLAGS   = {           // éléments visuels togglables
+  mandates:    true,
+  hatching:    true,
+  cdpZones:    true,
+  connectors:  true,
+  dotConns:    true,
+  personCdp:   true,
+  heatmap:     true,
+  alerts:      true,
+  axisZones:   true,
+};
 let SEARCH_TEXT   = '';
 
 function applyFilters() {
@@ -3339,7 +3370,31 @@ function applyFilters() {
       }
     }
 
-    el.classList.toggle('axis-hidden', hiddenByAxis || hiddenBySchema || hiddenBySearch || hiddenByCo);
+    // Critère 5 : statut de la company principale masqué
+    let hiddenByStatus = false;
+    if (MUTED_STATUSES.size > 0) {
+      const evCoIds = pAll(ev, 'ftmRef');
+      if (evCoIds.length > 0) {
+        const allMuted = evCoIds.every(id => {
+          const co = ENTITIES[id];
+          const st = p1(co, 'status') || 'default';
+          return MUTED_STATUSES.has(st);
+        });
+        if (allMuted) hiddenByStatus = true;
+      }
+    }
+
+    el.classList.toggle('axis-hidden',
+      hiddenByAxis || hiddenBySchema || hiddenBySearch || hiddenByCo || hiddenByStatus);
+  });
+
+  // Bandes co-band : masquer selon statut
+  document.querySelectorAll('.co-band').forEach(band => {
+    const coId = band.id.replace('co-', '');
+    const co   = ENTITIES[coId];
+    const st   = p1(co, 'status') || 'default';
+    band.classList.toggle('co-muted',
+      MUTED_COS.has(coId) || (MUTED_STATUSES.size > 0 && MUTED_STATUSES.has(st)));
   });
 }
 
@@ -3429,6 +3484,55 @@ function toggleCo(coId) {
   });
 
   applyFilters();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   APPLY VISUALS — applique VISUAL_FLAGS au DOM
+═══════════════════════════════════════════════════════════ */
+function applyVisuals() {
+  const canvas = document.getElementById('canvas');
+  if (!canvas) return;
+
+  // Mandats (lignes dirigeants dans les bandes)
+  canvas.querySelectorAll('.mandate-line').forEach(el => {
+    el.style.display = VISUAL_FLAGS.mandates ? '' : 'none';
+  });
+  // Hachures procédurales DDC/forclusion/appel
+  canvas.querySelectorAll('.proc-hatch').forEach(el => {
+    el.style.display = VISUAL_FLAGS.hatching ? '' : 'none';
+  });
+  // Zones CDP (fond jaune)
+  canvas.querySelectorAll('.cdp-zone').forEach(el => {
+    el.style.display = VISUAL_FLAGS.cdpZones ? '' : 'none';
+  });
+  // Zones de fond par axe (axis-zone)
+  canvas.querySelectorAll('.axis-zone').forEach(el => {
+    el.style.opacity = VISUAL_FLAGS.axisZones ? '' : '0';
+  });
+  // Connexions SVG entre entités
+  const connSvg = document.getElementById('connector-svg');
+  if (connSvg) {
+    connSvg.querySelectorAll('.conn-line, .conn-arrow, .conn-path, g[class^="conn"]').forEach(el => {
+      el.style.display = VISUAL_FLAGS.connectors ? '' : 'none';
+    });
+    // Lignes CDP par personne
+    connSvg.querySelectorAll('.person-cdp-line, .person-cdp-label').forEach(el => {
+      el.style.display = VISUAL_FLAGS.personCdp ? '' : 'none';
+    });
+    // Lignes dot-connectors (entre dots liés)
+    connSvg.querySelectorAll('.dot-conn-line').forEach(el => {
+      el.style.display = VISUAL_FLAGS.dotConns ? '' : 'none';
+    });
+  }
+  // Heatmap densité
+  const hm = document.getElementById('density-heatmap');
+  if (hm) hm.style.opacity = VISUAL_FLAGS.heatmap ? '' : '0';
+
+  // Alertes (pulse + banner)
+  document.querySelectorAll('.alert-dot, .ev-card.is-alert').forEach(el => {
+    el.classList.toggle('visually-hidden-alert', !VISUAL_FLAGS.alerts);
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4284,7 +4388,7 @@ function buildLegendPanel() {
     panel.appendChild(sec);
   }
 
-  // ── Section : statuts sociétés ──
+  // ── Section : statuts sociétés (boutons-bascule) ──
   {
     const sec = document.createElement('div');
     sec.className = 'lgd-section';
@@ -4294,31 +4398,54 @@ function buildLegendPanel() {
     sec.appendChild(title);
 
     const STATUTS = [
-      ['active',   'Active'],
-      ['rj',       'Redressement judiciaire'],
-      ['lj',       'Liquidation judiciaire'],
-      ['insolvent','Cessation de paiements'],
-      ['dissolved','Dissoute / radiée'],
-      ['dormant',  'Dormante'],
-      ['default',  'Statut inconnu'],
+      ['active',    'Active'],
+      ['rj',        'Redressement judiciaire'],
+      ['lj',        'Liquidation judiciaire'],
+      ['insolvent', 'Cessation de paiements'],
+      ['dissolved', 'Dissoute / radiée'],
+      ['dormant',   'Dormante'],
+      ['default',   'Statut inconnu'],
     ];
     for (const [key, label] of STATUTS) {
+      // Compter les sociétés présentes avec ce statut
+      const count = Object.values(ENTITIES).filter(e =>
+        e.schema === 'Company' && (p1(e,'status') || 'default') === key
+      ).length;
+      if (!count) continue; // n'afficher que les statuts représentés
+
       const entry = document.createElement('div');
-      entry.className = 'lgd-entry';
+      entry.className = 'lgd-entry toggleable';
+      entry.dataset.statusKey = key;
+      entry.title = `Afficher/masquer les entités de statut « ${label} » (${count})`;
+
       const sw = document.createElement('div');
       sw.className = 'lgd-swatch';
       sw.style.background = STATUS_BG[key] || STATUS_BG.default;
+
       const lbl = document.createElement('div');
       lbl.className = 'lgd-lbl';
-      lbl.textContent = label;
+      lbl.textContent = `${label} (${count})`;
+
       entry.appendChild(sw);
       entry.appendChild(lbl);
+
+      entry.addEventListener('click', () => {
+        if (MUTED_STATUSES.has(key)) {
+          MUTED_STATUSES.delete(key);
+          entry.classList.remove('lgd-muted');
+        } else {
+          MUTED_STATUSES.add(key);
+          entry.classList.add('lgd-muted');
+        }
+        applyFilters();
+      });
+
       sec.appendChild(entry);
     }
     panel.appendChild(sec);
   }
 
-  // ── Section : schémas FtM présents ──
+  // ── Section : schémas FtM (boutons-bascule) ──
   {
     const SCHEMA_ICON = {
       Event:        '⬡',
@@ -4340,22 +4467,58 @@ function buildLegendPanel() {
       for (const schema of schemas) {
         const count = EVENTS.filter(e => e.schema === schema).length;
         const entry = document.createElement('div');
-        entry.className = 'lgd-entry';
+        entry.className = 'lgd-entry toggleable';
+        if (MUTED_SCHEMAS.size > 0 && !MUTED_SCHEMAS.has(schema)) entry.classList.add('lgd-muted');
+        entry.title = `Afficher/masquer les événements de type ${schema} (${count})`;
+
         const icon = document.createElement('div');
+        icon.className = 'lgd-icon';
         icon.style.cssText = 'width:14px;text-align:center;font-size:11px;color:var(--dust2);flex-shrink:0;';
         icon.textContent = SCHEMA_ICON[schema] || '○';
+
         const lbl = document.createElement('div');
         lbl.className = 'lgd-lbl';
         lbl.textContent = `${schema} (${count})`;
+
         entry.appendChild(icon);
         entry.appendChild(lbl);
+
+        entry.addEventListener('click', () => {
+          // Logique solo-select : MUTED_SCHEMAS = ensemble des schémas NON actifs
+          // Si cliqué sur le seul actif → reset tout (afficher tout)
+          if (MUTED_SCHEMAS.size === schemas.length - 1 && !MUTED_SCHEMAS.has(schema)) {
+            // On clique sur le seul visible → reset
+            MUTED_SCHEMAS.clear();
+          } else if (MUTED_SCHEMAS.has(schema)) {
+            // Réactiver ce schéma
+            MUTED_SCHEMAS.delete(schema);
+          } else {
+            // Masquer ce schéma
+            MUTED_SCHEMAS.add(schema);
+          }
+          // Sync état visuel de toutes les entrées
+          sec.querySelectorAll('.lgd-entry.toggleable').forEach(e2 => {
+            const s2 = e2.dataset.schema;
+            if (!s2) return;
+            const isMuted = MUTED_SCHEMAS.size > 0 && !MUTED_SCHEMAS.has(s2);
+            e2.classList.toggle('lgd-muted', isMuted);
+          });
+          // Sync boutons info-bar (buildSchemaFilters)
+          document.querySelectorAll('#inf-schema-btns button[data-schema]').forEach(btn => {
+            const s2 = btn.dataset.schema;
+            btn.classList.toggle('muted', MUTED_SCHEMAS.size > 0 && !MUTED_SCHEMAS.has(s2));
+          });
+          applyFilters();
+        });
+        entry.dataset.schema = schema;
+
         sec.appendChild(entry);
       }
       panel.appendChild(sec);
     }
   }
 
-  // ── Section : éléments visuels ──
+  // ── Section : éléments visuels (boutons-bascule) ──
   {
     const sec = document.createElement('div');
     sec.className = 'lgd-section';
@@ -4364,23 +4527,44 @@ function buildLegendPanel() {
     title.textContent = 'Éléments visuels';
     sec.appendChild(title);
 
-    const items = [
-      { icon: '●', label: 'Événement daté',      color: 'var(--dust2)' },
-      { icon: '▬', label: 'Mandat (dirigeant)',   color: 'var(--dust2)' },
-      { icon: '⚠', label: 'Alerte OSINT',         color: 'var(--red)' },
-      { icon: '◈', label: 'Connexion SVG',         color: 'var(--dust2)' },
+    // Chaque item : { flag, icon, label, color }
+    const VITEMS = [
+      { flag: 'mandates',   icon: '▬', label: 'Lignes de mandat',     color: 'var(--dust2)' },
+      { flag: 'hatching',   icon: '⫠', label: 'Hachures DDC/forclusion', color: 'var(--red)' },
+      { flag: 'cdpZones',   icon: '▭', label: 'Zones CDP (fond jaune)', color: '#c8a800' },
+      { flag: 'axisZones',  icon: '▓', label: 'Fond axes narratifs',   color: 'var(--dust2)' },
+      { flag: 'connectors', icon: '◈', label: 'Connexions SVG',        color: 'var(--dust2)' },
+      { flag: 'dotConns',   icon: '⌒', label: 'Liaisons dot-à-dot',   color: 'var(--dust2)' },
+      { flag: 'personCdp',  icon: '—', label: 'Lignes CDP personnes',  color: 'var(--teal)' },
+      { flag: 'heatmap',    icon: '⊡', label: 'Densité événements',    color: 'var(--dust2)' },
+      { flag: 'alerts',     icon: '⚠', label: 'Alertes OSINT',         color: 'var(--red)' },
     ];
-    for (const it of items) {
+
+    for (const vit of VITEMS) {
       const entry = document.createElement('div');
-      entry.className = 'lgd-entry';
+      entry.className = 'lgd-entry toggleable';
+      if (!VISUAL_FLAGS[vit.flag]) entry.classList.add('lgd-muted');
+      entry.dataset.visualFlag = vit.flag;
+      entry.title = `Afficher/masquer : ${vit.label}`;
+
       const icon = document.createElement('div');
-      icon.style.cssText = `width:14px;text-align:center;font-size:11px;color:${it.color};flex-shrink:0;`;
-      icon.textContent = it.icon;
+      icon.className = 'lgd-icon';
+      icon.style.cssText = `width:14px;text-align:center;font-size:11px;color:${vit.color};flex-shrink:0;`;
+      icon.textContent = vit.icon;
+
       const lbl = document.createElement('div');
       lbl.className = 'lgd-lbl';
-      lbl.textContent = it.label;
+      lbl.textContent = vit.label;
+
       entry.appendChild(icon);
       entry.appendChild(lbl);
+
+      entry.addEventListener('click', () => {
+        VISUAL_FLAGS[vit.flag] = !VISUAL_FLAGS[vit.flag];
+        entry.classList.toggle('lgd-muted', !VISUAL_FLAGS[vit.flag]);
+        applyVisuals();
+      });
+
       sec.appendChild(entry);
     }
     panel.appendChild(sec);
@@ -4557,6 +4741,7 @@ function rebuildCanvas() {
   buildDotConnectors(svg);
   buildDensityHeatmap();
   buildLegendPanel();
+  applyVisuals();   // appliquer les flags visuels après chaque rebuild
   syncScrollTrackWidth();
 }
 
