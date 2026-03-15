@@ -353,7 +353,7 @@ body::before {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 15;  /* au-dessus des bandes (z:8) — les dot-card-line deviennent visibles */
   width: 100%;
   height: 100%;
   overflow: visible;
@@ -1010,27 +1010,7 @@ body::before {
 .ev-card--ownership:hover .ev-card-title {
   text-shadow: none !important;
 }
-/* Idem sur surlignage indirect (bande survolée) */
-.ev-anchor.band-hovered .ev-card--directorship,
-.ev-anchor.band-hovered .ev-card--payment,
-.ev-anchor.band-hovered .ev-card--document,
-.ev-anchor.band-hovered .ev-card--ownership {
-  background: rgba(252, 251, 249, 0.94) !important;
-  box-shadow: 0 6px 28px rgba(10,11,13,0.18), 0 2px 8px rgba(10,11,13,0.09) !important;
-  border-top: 1px solid var(--wire) !important;
-  border-right: 1px solid var(--wire) !important;
-  border-bottom: 1px solid var(--wire) !important;
-}
-.ev-anchor.band-hovered .ev-card--directorship .ev-card-title,
-.ev-anchor.band-hovered .ev-card--directorship .ev-card-desc,
-.ev-anchor.band-hovered .ev-card--payment .ev-card-title,
-.ev-anchor.band-hovered .ev-card--payment .ev-card-amount,
-.ev-anchor.band-hovered .ev-card--document .ev-card-title,
-.ev-anchor.band-hovered .ev-card--document .ev-card-desc,
-.ev-anchor.band-hovered .ev-card--document .ev-card-date,
-.ev-anchor.band-hovered .ev-card--ownership .ev-card-title {
-  text-shadow: none !important;
-}
+/* Surlignage indirect : cartes transparentes restent transparentes (lisibilité via text-shadow) */
 /* Alert : toujours prioritaire sur les variantes ci-dessus */
 .ev-card.is-alert {
   border-left-color: var(--red) !important;
@@ -3274,8 +3254,8 @@ function buildDotConnectors(svg) {
     //   = yFinal + DOT_R (= centre du dot hors empilement → trait nul → skip)
     const x1 = xDot,                          y1 = yDot + DOT_R;
     const x2 = xCard,                         y2 = yCard + CARD_TITLE_HALF_H;
-    // Skip si trait de longueur nulle (événement non empilé)
-    if (Math.abs(x1 - x2) < 2 && Math.abs(y1 - y2) < 2) continue;
+    // Skip uniquement si le déplacement vertical est nul (dot et carte parfaitement superposés)
+    if (Math.abs(y1 - y2) < 2) continue;
 
     const evId = anchor.id.replace(/^ev-/, '');
     const ev = EVENTS.find(e => e.id === evId);
@@ -3638,7 +3618,7 @@ function applyVisuals() {
       el.style.display = VISUAL_FLAGS.personCdp ? '' : 'none';
     });
     // Lignes dot-connectors (entre dots liés)
-    connSvg.querySelectorAll('.dot-conn-line').forEach(el => {
+    connSvg.querySelectorAll('.dot-card-line').forEach(el => {
       el.style.display = VISUAL_FLAGS.dotConns ? '' : 'none';
     });
   }
