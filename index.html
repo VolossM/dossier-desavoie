@@ -615,12 +615,8 @@ body::before {
   opacity: 0.12;
   transition: opacity 0.1s;
 }
-.dot-card-line.band-hovered {
-  stroke-opacity: 0.75 !important;
-  stroke-width: 2;
-}
 .dot-card-line.band-dimmed {
-  stroke-opacity: 0.03 !important;
+  stroke-opacity: 0 !important;
 }
 .ev-dot-node .ev-dot {
   pointer-events: all;
@@ -881,6 +877,22 @@ body::before {
   border-left: 1px solid rgba(255,255,255,0.4);
   border-bottom: 1px solid rgba(255,255,255,0.4);
 }
+
+/* Tick horizontal — événements génériques (schema Event sans catégorie proc.) */
+.ev-dot--tick {
+  width: calc(var(--dot-r) * 2.5);
+  height: 3px;
+  border-radius: 1.5px;
+  top: calc(var(--dot-r) - 1.5px);   /* centrage vertical : DOT_R − tickH/2 */
+  transform: translateX(-50%);        /* centrage horizontal seulement */
+  border: none;
+  opacity: 0.75;
+}
+.ev-dot--tick:hover {
+  transform: translateX(-50%) scaleX(1.4);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.30);
+  opacity: 1;
+}
 /* Payment — cercle vide, plus petit */
 .ev-dot--payment {
   background: transparent !important;
@@ -996,15 +1008,18 @@ body::before {
 
 /* Trait permanent reliant chaque carte à son dot sur bande */
 .dot-card-line {
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
   fill: none;
-  stroke-opacity: 0.25;
-  transition: stroke-opacity 0.15s;
+  stroke-opacity: 0;        /* invisible par défaut — apparaît uniquement au surlignage */
+  transition: stroke-opacity 0.12s;
+  pointer-events: none;
 }
-.dot-card-line.highlighted {
-  stroke-opacity: 0.75;
+.dot-card-line.highlighted,
+.dot-card-line.band-hovered {
+  stroke-opacity: 0.80 !important;
   stroke-dasharray: none;
+  stroke-width: 2;
 }
 
 /* ── Ligne CDP personne (traversant toute la frise) ── */
@@ -3054,11 +3069,13 @@ function buildEvents_DOM(canvas) {
 
     const dot = document.createElement('div');
     const sCls = schemaClass(ev);
-    dot.className = ['ev-dot', sCls ? 'ev-dot--' + sCls : '', isAlert(ev) ? 'alert-dot' : '']
+    // null sCls = Event générique → tick horizontal ; sinon forme spécifique
+    const dotShapeCls = sCls ? 'ev-dot--' + sCls : 'ev-dot--tick';
+    dot.className = ['ev-dot', dotShapeCls, isAlert(ev) ? 'alert-dot' : '']
       .filter(Boolean).join(' ');
-    // Dot payment : couleur via CSS currentColor sur border
-    if (sCls !== 'payment') dot.style.background = ax.color;
-    else dot.style.color = ax.color;
+    // Payment : couleur via currentColor ; tick : opacité CSS ; autres : background
+    if (sCls === 'payment') dot.style.color = ax.color;
+    else dot.style.background = ax.color;
     dotNode.appendChild(dot);
 
     canvas.appendChild(dotNode);
