@@ -987,6 +987,50 @@ body::before {
   border-color: rgba(80,40,160,0.15);
 }
 
+
+/* ── Opacification au survol des cartes à fond transparent/semi-transparent ── */
+.ev-card--directorship:hover,
+.ev-card--payment:hover,
+.ev-card--document:hover,
+.ev-card--ownership:hover {
+  background: rgba(252, 251, 249, 0.97) !important;
+  box-shadow: 0 4px 18px rgba(10,11,13,0.11), 0 1px 4px rgba(10,11,13,0.06) !important;
+  border-top: 1px solid var(--wire) !important;
+  border-right: 1px solid var(--wire) !important;
+  border-bottom: 1px solid var(--wire) !important;
+}
+/* Supprimer le text-shadow blanc une fois la carte opaque */
+.ev-card--directorship:hover .ev-card-title,
+.ev-card--directorship:hover .ev-card-desc,
+.ev-card--payment:hover .ev-card-title,
+.ev-card--payment:hover .ev-card-amount,
+.ev-card--document:hover .ev-card-title,
+.ev-card--document:hover .ev-card-desc,
+.ev-card--document:hover .ev-card-date,
+.ev-card--ownership:hover .ev-card-title {
+  text-shadow: none !important;
+}
+/* Idem sur surlignage indirect (bande survolée) */
+.ev-anchor.band-hovered .ev-card--directorship,
+.ev-anchor.band-hovered .ev-card--payment,
+.ev-anchor.band-hovered .ev-card--document,
+.ev-anchor.band-hovered .ev-card--ownership {
+  background: rgba(252, 251, 249, 0.94) !important;
+  box-shadow: 0 6px 28px rgba(10,11,13,0.18), 0 2px 8px rgba(10,11,13,0.09) !important;
+  border-top: 1px solid var(--wire) !important;
+  border-right: 1px solid var(--wire) !important;
+  border-bottom: 1px solid var(--wire) !important;
+}
+.ev-anchor.band-hovered .ev-card--directorship .ev-card-title,
+.ev-anchor.band-hovered .ev-card--directorship .ev-card-desc,
+.ev-anchor.band-hovered .ev-card--payment .ev-card-title,
+.ev-anchor.band-hovered .ev-card--payment .ev-card-amount,
+.ev-anchor.band-hovered .ev-card--document .ev-card-title,
+.ev-anchor.band-hovered .ev-card--document .ev-card-desc,
+.ev-anchor.band-hovered .ev-card--document .ev-card-date,
+.ev-anchor.band-hovered .ev-card--ownership .ev-card-title {
+  text-shadow: none !important;
+}
 /* Alert : toujours prioritaire sur les variantes ci-dessus */
 .ev-card.is-alert {
   border-left-color: var(--red) !important;
