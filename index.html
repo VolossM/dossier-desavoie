@@ -323,7 +323,12 @@ body::before {
   opacity: 0.7;
   user-select: none;
   flex: 1;
-  padding-bottom: 12px;
+  padding-bottom: 12px;   /* chronologique : label flotte vers le haut du bloc */
+}
+/* Mode antichronologique : le début de l'année est en BAS du bloc */
+.yr-label.yr-label--inv {
+  padding-bottom: 0;
+  padding-top: 12px;      /* label flotte vers le bas du bloc */
 }
 /* Millésime horizontal (blocs suffisamment hauts) */
 .yr-label--horiz {
@@ -2439,8 +2444,8 @@ function buildYearSpine() {
         label.className = 'yr-label yr-label--horiz';
         label.textContent = y;
       } else {
-        // Compact : label vertical habituel
-        label.className = 'yr-label';
+        // Compact : label vertical, orientation selon le sens de la frise
+        label.className = INVERT_TIMELINE ? 'yr-label yr-label--inv' : 'yr-label';
         label.textContent = y;
       }
       block.appendChild(label);
@@ -3467,27 +3472,24 @@ function applyFilters() {
       hiddenBySearch = !hay.includes(needle);
     }
 
-    // Critère 4 : toutes les companies liées à cet événement sont masquées
-    let hiddenByCo = false;
-    if (MUTED_COS.size > 0) {
-      const evCoIds = pAll(ev, 'ftmRef');
-      // Masquer seulement si l'événement a au moins une company ET que toutes sont masquées
-      if (evCoIds.length > 0 && evCoIds.every(id => MUTED_COS.has(id))) {
-        hiddenByCo = true;
-      }
-    }
-
-    // Critère 5 : statut de la company principale masqué
+    // Critères 4+5 : company principale de l'événement masquée (par id, axe ou statut)
+    // Company principale = premier ftmRef qui est une Company dans ENTITIES.
+    // Si cette company est masquée, l'événement disparaît avec sa bande.
+    let hiddenByCo    = false;
     let hiddenByStatus = false;
-    if (MUTED_STATUSES.size > 0) {
+    {
       const evCoIds = pAll(ev, 'ftmRef');
       if (evCoIds.length > 0) {
-        const allMuted = evCoIds.every(id => {
-          const co = ENTITIES[id];
-          const st = p1(co, 'status') || 'default';
-          return MUTED_STATUSES.has(st);
-        });
-        if (allMuted) hiddenByStatus = true;
+        // Trouver la company principale (premier ftmRef de schema Company)
+        const primaryId = evCoIds.find(id => ENTITIES[id]?.schema === 'Company') || evCoIds[0];
+        const co = ENTITIES[primaryId];
+        if (co) {
+          const axId = p1(co, 'axis') || null;
+          const st   = p1(co, 'status') || 'default';
+          hiddenByCo = MUTED_COS.has(primaryId)
+            || (axId && MUTED_AXES.has(axId));
+          hiddenByStatus = MUTED_STATUSES.size > 0 && MUTED_STATUSES.has(st);
+        }
       }
     }
 
