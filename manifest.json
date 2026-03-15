@@ -105,19 +105,19 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "9d05e8adf21baf6f6f976de00eefa058461c71f8450fc3a734ab2a6aac7bb8eb",
-      "version": 49,
-      "size": 204748,
-      "deployed": "2026-03-14T23:28:31Z"
+      "sha256": "8d3dd5c32f28dde1bbc7b69930e777da2452fe7e776a1a88f431ec2a86ad83ef",
+      "version": 50,
+      "size": 202463,
+      "deployed": "2026-03-15T00:01:43Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "0c3df944dafc47ad4b2a0b734537c2d7e89f6af513dc623caadcfa73dd54c279",
-      "version": 47,
-      "size": 595459,
-      "deployed": "2026-03-14T23:28:31Z"
+      "sha256": "bbc01b45a7afa725b83507a9c442188fbaa91a17cdea67c7db0f9b97c0ef9c6d",
+      "version": 48,
+      "size": 590611,
+      "deployed": "2026-03-15T00:01:43Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
@@ -158,11 +158,11 @@
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
-      "sha256": "ca40833982a59d175f68be6672ecf1e6a60c69d2e32af04821a0823f69b62945",
-      "version": 48,
-      "size": 98111,
-      "deployed": "2026-03-14T23:28:31Z"
+      "sha256": "3e28072c1142ee0d2b13de6ce1c207d691e9c52672b7485ad9098f7735643266",
+      "version": 49,
+      "size": 99260,
+      "deployed": "2026-03-15T00:01:43Z"
     }
   ],
-  "_last_deploy": "2026-03-14T23:28:31Z"
+  "_last_deploy": "2026-03-15T00:01:43Z"
 }

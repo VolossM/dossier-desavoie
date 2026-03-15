@@ -2097,21 +2097,25 @@ function computeLayout() {
   _personColorIdx = 0;
   _companyLayout  = {};
 
-  // 1. Grouper les sociétés par axe narratif
+  // 1. Grouper les sociétés par axe narratif (en excluant les masquées pour le repacking)
   const axisCompanies = {};
   for (const ax of Object.values(AXIS_MAP)) axisCompanies[ax.id] = [];
 
   const _seenCoIds = new Set();  // garde anti-doublon : chaque coId ne doit apparaître qu'une fois
   for (const ent of Object.values(ENTITIES)) {
     if (ent.schema !== 'Company') continue;
-    // Exclure les doublons explicitement marqués _deprecated (noms antérieurs d'une entité
-    // canonique — ex. Sunny Meadows / Gaia Resources / GAIA Capital → company-circle-square).
-    // Ces entités ne génèrent pas de bandes mais restent référençables pour entityAxis().
+    // Exclure les doublons explicitement marqués _deprecated
     if (ent._deprecated && ent._deprecated.length) continue;
-    // Anti-doublon strict : un id ne génère jamais deux bandes (guard en cas de JSONL croisés)
+    // Anti-doublon strict
     if (_seenCoIds.has(ent.id)) continue;
     _seenCoIds.add(ent.id);
     const axId = p1(ent, 'axis') || Object.keys(AXIS_MAP)[0];
+    // Exclure les companies dont l'axe est masqué ou qui sont masquées individuellement
+    if (MUTED_AXES.has(axId)) continue;
+    if (MUTED_COS.has(ent.id)) continue;
+    // Exclure selon statut masqué
+    const st = p1(ent, 'status') || 'default';
+    if (MUTED_STATUSES.size > 0 && MUTED_STATUSES.has(st)) continue;
     if (!axisCompanies[axId]) axisCompanies[axId] = [];
     axisCompanies[axId].push(ent);
   }
@@ -2133,6 +2137,13 @@ function computeLayout() {
     const ax  = AXIS_MAP[axIds[ai]];
     const cos = axisCompanies[ax.id] || [];
     ax._xStart = cursor;
+
+    // Axe entièrement masqué : 0 largeur, pas de gap
+    if (MUTED_AXES.has(ax.id)) {
+      ax._xPx = cursor;
+      ax._wPx = 0;
+      continue;
+    }
 
     cos.sort((a, b) => {
       const da = p1(a, 'incorporationDate') || '0000';
@@ -3504,14 +3515,11 @@ function toggleAxis(axId) {
   if (MUTED_AXES.has(axId)) MUTED_AXES.delete(axId);
   else MUTED_AXES.add(axId);
 
+  // Sync pill header
   document.getElementById(`pill-${axId}`)?.classList.toggle('muted', MUTED_AXES.has(axId));
 
-  document.querySelectorAll('.axis-rail').forEach(el => {
-    const id = el.id.replace('rail-','');
-    el.style.opacity = MUTED_AXES.has(id) ? '0.1' : '1';
-  });
-
-  applyFilters(); // unifié avec les autres filtres
+  // Repacking complet : les bandes restantes se resserrent
+  rebuildCanvas();
 }
 
 /* Masquer / afficher une bande company individuelle. */
@@ -3519,18 +3527,8 @@ function toggleCo(coId) {
   if (MUTED_COS.has(coId)) MUTED_COS.delete(coId);
   else MUTED_COS.add(coId);
 
-  // Bande DOM
-  const band = document.getElementById('co-' + coId);
-  if (band) band.classList.toggle('co-muted', MUTED_COS.has(coId));
-
-  // Item dans le panel légende
-  document.querySelectorAll(`.lgd-co-item[data-co-id="${coId}"]`).forEach(el => {
-    el.classList.toggle('co-muted', MUTED_COS.has(coId));
-    const eye = el.querySelector('.lgd-co-eye');
-    if (eye) eye.textContent = MUTED_COS.has(coId) ? '✕' : '◉';
-  });
-
-  applyFilters();
+  // Repacking complet : les bandes restantes se resserrent
+  rebuildCanvas();
 }
 
 
@@ -4484,7 +4482,7 @@ function buildLegendPanel() {
           MUTED_STATUSES.add(key);
           entry.classList.add('lgd-muted');
         }
-        applyFilters();
+        rebuildCanvas();
       });
 
       sec.appendChild(entry);
