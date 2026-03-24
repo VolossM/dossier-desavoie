@@ -105,8 +105,8 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "a7bb4b026c5f098c9f85b2b62d4549a9e13834517bd01903ed3f2c1d0b66a4f1",
-      "size": 201865,
+      "sha256": "04e7900bcde40a74a60b92210c99dc7a5e0b40ea53b40198c64047faca2f1e2e",
+      "size": 251816,
       "version": 68,
       "deployed": "2026-03-23T17:53:06Z"
     },
@@ -114,8 +114,8 @@
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "d0299febc009802595e81602a7e075812d49d93795cd68d36cb8eb3c827281a5",
-      "size": 706522,
+      "sha256": "7da81dd930f01164a68f3b5e4626921d804776eed44dc956e762736cc08636b8",
+      "size": 720577,
       "version": 67,
       "deployed": "2026-03-23T17:53:06Z"
     },
@@ -123,8 +123,8 @@
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "d25b7e2affa85ffcc2d4f51000f6805d5034e2adf010ad5a9512d18b531941e0",
-      "size": 84649,
+      "sha256": "262221ec59a8ab099809a8f0c9dc88c9fd1ca511fbaf7fea98f897403e0da696",
+      "size": 114928,
       "version": 65,
       "deployed": "2026-03-23T17:53:06Z"
     },
@@ -132,8 +132,8 @@
       "path": "data/shams_indonesie.ftm.jsonl",
       "axis": "dubai",
       "label": "Shams Equity / Dubaï–Indonésie",
-      "sha256": "0575f7ad43ad0f83aec7556fcd307aa397aa28eadb8b943320ef7e6ba9bbb1fc",
-      "size": 11853,
+      "sha256": "581954ffac5b0ce1abfd33c42c20824235368fb7299a0423939a91be9acbe618",
+      "size": 17958,
       "version": 65,
       "deployed": "2026-03-23T17:53:06Z"
     },
@@ -141,8 +141,8 @@
       "path": "data/procedures.ftm.jsonl",
       "axis": "procedures",
       "label": "Procédures collectives",
-      "sha256": "c94693643f4f9be97b300cff3a093b89fbd8d67bbbb819aa8666afbad19a699a",
-      "size": 6422,
+      "sha256": "350392726f87b9d2524315fb4be323656d9d0d9c8b56e745e223e272c29ea484",
+      "size": 7798,
       "version": 63,
       "deployed": "2026-03-23T17:53:06Z"
     },
@@ -150,27 +150,27 @@
       "path": "data/presse.ftm.jsonl",
       "axis": null,
       "label": "Révélations & presse (axe dynamique)",
-      "sha256": "86ebae26a16fc2b65f8e3524a49c610dbfb94988b47503564281e688f5cc286f",
-      "size": 7596,
+      "sha256": "3b870706951a6cda20aee199da9354d386285e7fd13f352249089a3ccf3ef5a5",
+      "size": 7704,
       "version": 63,
       "deployed": "2026-03-23T17:53:06Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
-      "sha256": "f9b12d4286daff6613ab1781c4c33d2ebe2639f3dd3ff75dca74e2eb17444863",
-      "size": 112255,
+      "sha256": "a62ba531fa9db4ea06264809dbac8959c16677e209fda681c5d7001c875acf17",
+      "size": 147831,
       "version": 67,
       "deployed": "2026-03-23T17:53:06Z"
     },
     {
       "path": "data/espagne.ftm.jsonl",
       "axis": "espagne",
-      "sha256": "2aed8cb2829e35d9f8a63585e81c837393488cb6c53e237ee515610ed453ee56",
-      "size": 16456,
+      "sha256": "fdc25bd972d9a09f349fd3ebe87da4744be396718461f0030d260a496fa701bf",
+      "size": 17903,
       "version": 2,
       "deployed": "2026-03-23T17:53:06Z"
     }
   ],
-  "_last_deploy": "2026-03-23T17:53:06Z"
+  "_last_deploy": "2026-03-24T17:32:54Z"
 }
