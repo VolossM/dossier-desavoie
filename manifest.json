@@ -105,63 +105,63 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "04e7900bcde40a74a60b92210c99dc7a5e0b40ea53b40198c64047faca2f1e2e",
-      "size": 251816,
-      "version": 68,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "d577ef8b18cf243b391012f2304f886f3360bfbf9364a5fc2b5d70ed8d363740",
+      "size": 247186,
+      "version": 80,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "7da81dd930f01164a68f3b5e4626921d804776eed44dc956e762736cc08636b8",
-      "size": 720577,
-      "version": 67,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "69b0eac4691488b35e10d0365cc0f75acad111c7cd5c567b33150a4e217000b2",
+      "size": 5021141,
+      "version": 86,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "262221ec59a8ab099809a8f0c9dc88c9fd1ca511fbaf7fea98f897403e0da696",
-      "size": 114928,
-      "version": 65,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "fbc4275cc7cd171c0d151c2be0b9e0450c362af315216d2ed11737598b628e6b",
+      "size": 223489,
+      "version": 77,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/shams_indonesie.ftm.jsonl",
       "axis": "dubai",
       "label": "Shams Equity / Dubaï–Indonésie",
-      "sha256": "581954ffac5b0ce1abfd33c42c20824235368fb7299a0423939a91be9acbe618",
-      "size": 17958,
-      "version": 65,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "d3cb2be9fc1a668ab6fed88a4a7714ec67fa9a86b675e6043ca856a81f2fb76a",
+      "size": 17800,
+      "version": 77,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
       "axis": "procedures",
       "label": "Procédures collectives",
-      "sha256": "350392726f87b9d2524315fb4be323656d9d0d9c8b56e745e223e272c29ea484",
-      "size": 7798,
-      "version": 63,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "c94693643f4f9be97b300cff3a093b89fbd8d67bbbb819aa8666afbad19a699a",
+      "size": 6422,
+      "version": 75,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/presse.ftm.jsonl",
       "axis": null,
       "label": "Révélations & presse (axe dynamique)",
-      "sha256": "3b870706951a6cda20aee199da9354d386285e7fd13f352249089a3ccf3ef5a5",
-      "size": 7704,
-      "version": 63,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "86ebae26a16fc2b65f8e3524a49c610dbfb94988b47503564281e688f5cc286f",
+      "size": 7596,
+      "version": 75,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
-      "sha256": "a62ba531fa9db4ea06264809dbac8959c16677e209fda681c5d7001c875acf17",
-      "size": 147831,
-      "version": 67,
-      "deployed": "2026-03-23T17:53:06Z"
+      "sha256": "92a0f20d16953322532b41a02b6db44ea3e22df065537e161ce1d0c78991d2b4",
+      "size": 134385,
+      "version": 84,
+      "deployed": "2026-03-31T23:11:39Z"
     },
     {
       "path": "data/espagne.ftm.jsonl",
@@ -172,5 +172,5 @@
       "deployed": "2026-03-23T17:53:06Z"
     }
   ],
-  "_last_deploy": "2026-03-24T17:32:54Z"
+  "_last_deploy": "2026-03-31T23:11:39Z"
 }
