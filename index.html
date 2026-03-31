@@ -2439,12 +2439,19 @@ function buildYearSpine() {
     const step = snapStep(height > 0 ? MIN_LABEL_H / height : 100);
     if (y % step === 0) {
       const label = document.createElement('div');
-      if (height >= 32) {
-        // Assez de place : label horizontal centré
+      // En mode antichronologique (récent en haut), les années récentes ont de grands
+      // blocs (beaucoup d'événements → échelle exponentielle les étire) mais doivent
+      // être étiquetées verticalement pour ne pas saturer la spine.
+      // Les vieilles années ont de petits blocs (rares, espacés) et peuvent se
+      // permettre un label horizontal lisible.
+      // → seuil horizontal/vertical inversé quand INVERT_TIMELINE.
+      const useHoriz = INVERT_TIMELINE ? (height < 32) : (height >= 32);
+      if (useHoriz) {
+        // Label horizontal centré
         label.className = 'yr-label yr-label--horiz';
         label.textContent = y;
       } else {
-        // Compact : label vertical, orientation selon le sens de la frise
+        // Label vertical, orientation selon le sens de la frise
         label.className = INVERT_TIMELINE ? 'yr-label yr-label--inv' : 'yr-label';
         label.textContent = y;
       }

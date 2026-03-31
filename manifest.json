@@ -105,8 +105,8 @@
       "path": "data/reseau_goldberg.ftm.jsonl",
       "axis": "reseau_goldberg",
       "label": "Réseau Goldberg / Circle Square",
-      "sha256": "d577ef8b18cf243b391012f2304f886f3360bfbf9364a5fc2b5d70ed8d363740",
-      "size": 247186,
+      "sha256": "3ee452e91dd60e7af079a6f94a0ce69728b5f21b81fcd01af43e93e4678cc1b2",
+      "size": 299859,
       "version": 80,
       "deployed": "2026-03-31T23:11:39Z"
     },
@@ -114,8 +114,8 @@
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "69b0eac4691488b35e10d0365cc0f75acad111c7cd5c567b33150a4e217000b2",
-      "size": 5021141,
+      "sha256": "ebae50cde13e9b738bff1e9c1e31553a13719b32a300d23736096d1430b29f41",
+      "size": 4739207,
       "version": 86,
       "deployed": "2026-03-31T23:11:39Z"
     },
@@ -123,8 +123,8 @@
       "path": "data/victimes_mch.ftm.jsonl",
       "axis": "victimes",
       "label": "MCH / RIC / Reynaud",
-      "sha256": "fbc4275cc7cd171c0d151c2be0b9e0450c362af315216d2ed11737598b628e6b",
-      "size": 223489,
+      "sha256": "7e021745122842aab03bebbb488854640981cce561a661a5dd7ea7239aea8388",
+      "size": 248992,
       "version": 77,
       "deployed": "2026-03-31T23:11:39Z"
     },
@@ -135,7 +135,7 @@
       "sha256": "d3cb2be9fc1a668ab6fed88a4a7714ec67fa9a86b675e6043ca856a81f2fb76a",
       "size": 17800,
       "version": 77,
-      "deployed": "2026-03-31T23:11:39Z"
+      "deployed": "2026-03-31T23:37:25Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
@@ -144,7 +144,7 @@
       "sha256": "c94693643f4f9be97b300cff3a093b89fbd8d67bbbb819aa8666afbad19a699a",
       "size": 6422,
       "version": 75,
-      "deployed": "2026-03-31T23:11:39Z"
+      "deployed": "2026-03-31T23:37:25Z"
     },
     {
       "path": "data/presse.ftm.jsonl",
@@ -153,13 +153,13 @@
       "sha256": "86ebae26a16fc2b65f8e3524a49c610dbfb94988b47503564281e688f5cc286f",
       "size": 7596,
       "version": 75,
-      "deployed": "2026-03-31T23:11:39Z"
+      "deployed": "2026-03-31T23:37:25Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
       "axis": "zimmermann",
-      "sha256": "92a0f20d16953322532b41a02b6db44ea3e22df065537e161ce1d0c78991d2b4",
-      "size": 134385,
+      "sha256": "5aa8528193d6299c732357df9e5402cdd3dd310497aa97b6be230d31d7dceaab",
+      "size": 197034,
       "version": 84,
       "deployed": "2026-03-31T23:11:39Z"
     },
@@ -172,5 +172,5 @@
       "deployed": "2026-03-23T17:53:06Z"
     }
   ],
-  "_last_deploy": "2026-03-31T23:11:39Z"
+  "_last_deploy": "2026-03-31T23:37:25Z"
 }
