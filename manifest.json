@@ -114,10 +114,10 @@
       "path": "data/desavoie_groupe.ftm.jsonl",
       "axis": "desavoie",
       "label": "Groupe DeSavoie / Chicherit",
-      "sha256": "ebae50cde13e9b738bff1e9c1e31553a13719b32a300d23736096d1430b29f41",
-      "size": 4739207,
-      "version": 86,
-      "deployed": "2026-03-31T23:11:39Z"
+      "sha256": "49a3268b988ffcdb687531a6ee40ec07ea7f89823bd9235fc7ca1811e58b0ede",
+      "size": 4749932,
+      "version": 87,
+      "deployed": "2026-04-01T06:13:06Z"
     },
     {
       "path": "data/victimes_mch.ftm.jsonl",
@@ -135,7 +135,7 @@
       "sha256": "d3cb2be9fc1a668ab6fed88a4a7714ec67fa9a86b675e6043ca856a81f2fb76a",
       "size": 17800,
       "version": 77,
-      "deployed": "2026-04-01T00:35:19Z"
+      "deployed": "2026-04-01T06:13:06Z"
     },
     {
       "path": "data/procedures.ftm.jsonl",
@@ -144,7 +144,7 @@
       "sha256": "c94693643f4f9be97b300cff3a093b89fbd8d67bbbb819aa8666afbad19a699a",
       "size": 6422,
       "version": 75,
-      "deployed": "2026-04-01T00:35:19Z"
+      "deployed": "2026-04-01T06:13:06Z"
     },
     {
       "path": "data/presse.ftm.jsonl",
@@ -153,7 +153,7 @@
       "sha256": "86ebae26a16fc2b65f8e3524a49c610dbfb94988b47503564281e688f5cc286f",
       "size": 7596,
       "version": 75,
-      "deployed": "2026-04-01T00:35:19Z"
+      "deployed": "2026-04-01T06:13:06Z"
     },
     {
       "path": "data/zimmermann.ftm.jsonl",
@@ -172,5 +172,5 @@
       "deployed": "2026-03-23T17:53:06Z"
     }
   ],
-  "_last_deploy": "2026-04-01T00:35:19Z"
+  "_last_deploy": "2026-04-01T06:13:06Z"
 }
