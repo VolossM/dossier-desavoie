@@ -73,9 +73,11 @@ GITIGNORE = """\
 !manifest.json
 !init_git.py
 !.gitignore
-!.deploy_config.json
 !data/
 !data/*.jsonl
+
+# .deploy_config.json : JAMAIS versionne (peut contenir des identifiants).
+# Reste local ; regenere par setup.py. Exclu par le "*" ci-dessus.
 """
 
 # ─────────────────────────────────────────────

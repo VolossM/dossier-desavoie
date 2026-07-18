@@ -7,7 +7,7 @@ Usage : double-clic (lance par init_git.py) ou python setup.py
 Prérequis : Git installe, token GitHub Personnel (scope: repo)
 """
 
-import os, sys, json, subprocess, urllib.request, urllib.error, getpass, traceback
+import os, sys, json, base64, subprocess, urllib.request, urllib.error, getpass, traceback
 from pathlib import Path
 
 # ─────────────────────────────────────────────
@@ -49,12 +49,22 @@ def find_git():
 
 GIT = None  # initialise dans main()
 
-def run(cmd, cwd=None, check=True):
-    full_cmd = cmd.replace("git ", f'"{GIT}" ', 1) if cmd.startswith("git ") else cmd
-    proc = subprocess.Popen(
-        full_cmd, shell=True, cwd=cwd or SCRIPT_DIR,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
+def run(cmd, cwd=None, check=True, env=None):
+    # cmd = liste d'arguments -> exécution sans shell (sûre : aucune interpolation
+    # de valeur variable dans une ligne de shell). cmd = chaîne -> shell (réservé
+    # aux commandes statiques). Le premier "git" est remplacé par le chemin résolu.
+    if isinstance(cmd, list):
+        argv = [GIT if a == "git" else a for a in cmd]
+        proc = subprocess.Popen(
+            argv, shell=False, cwd=cwd or SCRIPT_DIR,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+        )
+    else:
+        full_cmd = cmd.replace("git ", f'"{GIT}" ', 1) if cmd.startswith("git ") else cmd
+        proc = subprocess.Popen(
+            full_cmd, shell=True, cwd=cwd or SCRIPT_DIR,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+        )
     raw_out, raw_err = proc.communicate()
     r_stdout = raw_out.decode("utf-8", errors="replace")
     r_stderr = raw_err.decode("utf-8", errors="replace")
@@ -69,6 +79,17 @@ def run(cmd, cwd=None, check=True):
         print(f"  stderr : {r.stderr.strip()}")
         fail(f"Commande echouee : {cmd}")
     return r
+
+def git_auth_env(username, token):
+    """Environnement transmettant le token a git via GIT_CONFIG_* (en-tete HTTP
+    ephemere). Le token n'est ni ecrit dans .git/config, ni passe en argument."""
+    basic = base64.b64encode(f"{username}:{token}".encode()).decode()
+    return {
+        **os.environ,
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "http.extraheader",
+        "GIT_CONFIG_VALUE_0": f"Authorization: Basic {basic}",
+    }
 
 def api(method, path, data=None, token=None):
     url = f"https://api.github.com{path}"
@@ -141,8 +162,6 @@ def main():
         clone_url = resp["clone_url"]
         ok(f"Depot cree : {repo_url}")
 
-    auth_url = clone_url.replace("https://", f"https://{username}:{token}@")
-
     # 4. Depot Git local
     h("Depot Git local")
     if os.path.exists(os.path.join(SCRIPT_DIR, ".git")):
@@ -151,13 +170,15 @@ def main():
         run("git init -b main")
         ok("git init")
 
+    # URL propre (sans token) : l'authentification se fait a la volee au push
+    # via git_auth_env, jamais persistee dans .git/config.
     remotes = run("git remote -v", check=False).stdout
     if "origin" in remotes:
-        run(f"git remote set-url origin {auth_url}")
-        ok("Remote origin mis a jour.")
+        run(["git", "remote", "set-url", "origin", clone_url])
+        ok("Remote origin mis a jour (URL propre, sans token).")
     else:
-        run(f"git remote add origin {auth_url}")
-        ok("Remote origin ajoute.")
+        run(["git", "remote", "add", "origin", clone_url])
+        ok("Remote origin ajoute (URL propre, sans token).")
 
     run('git config credential.helper ""')
     ok("Credential Manager desactive.")
@@ -216,10 +237,11 @@ def main():
     else:
         ok("Rien a committer.")
 
-    pr = run("git push -u origin main", check=False)
+    push_env = git_auth_env(username, token)
+    pr = run(["git", "push", "-u", "origin", "main"], check=False, env=push_env)
     if pr.returncode != 0:
         # Force push nécessaire si l'historique a été réécrit par amend
-        pr = run("git push -u origin main --force", check=False)
+        pr = run(["git", "push", "-u", "origin", "main", "--force"], check=False, env=push_env)
         if pr.returncode != 0:
             print(f"\n  {RED}Erreur push :{R}")
             print(f"  stdout : {pr.stdout.strip()}")

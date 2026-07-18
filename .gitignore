@@ -8,6 +8,5 @@
 !manifest.json
 !init_git.py
 !.gitignore
-!.deploy_config.json
 !data/
 !data/*.jsonl
