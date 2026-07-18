@@ -10,3 +10,4 @@
 !.gitignore
 !data/
 !data/*.jsonl
+.deploy_config.json
