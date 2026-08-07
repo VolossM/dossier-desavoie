@@ -133,6 +133,36 @@ def file_matches(path, fingerprint):
     except OSError:
         return False
 
+def count_ftm_entities(path):
+    """
+    Compte les entités FtM valides d'un .ftm.jsonl : lignes JSON qui décodent
+    en objet portant un `id` non vide. Retourne (n_valides, n_invalides).
+    Tolérant — ne lève jamais (renvoie (0, 0) si le fichier est illisible).
+
+    Sert de garde anti-perte au déploiement : le pipeline émet parfois des
+    .ftm.jsonl de 2 octets (crash writer, résultat vide) dans data_desavoie —
+    un simple `st_size > 0` les laisse passer, ce contrôle par entités non.
+    """
+    n_ok = n_bad = 0
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    n_bad += 1
+                    continue
+                if isinstance(obj, dict) and obj.get("id"):
+                    n_ok += 1
+                else:
+                    n_bad += 1
+    except OSError:
+        return 0, 0
+    return n_ok, n_bad
+
 # ─────────────────────────────────────────────
 # Détection robuste : version Windows + empreinte
 # ─────────────────────────────────────────────
@@ -150,6 +180,8 @@ PROMOTED_SEEDS = {
     "reseau_goldberg.ftm.jsonl",
     "shams_indonesie.ftm.jsonl",
     "sainte_foy_consolidated.ftm.jsonl",
+    "coeur_desavoie.ftm.jsonl",     # [2026-07-18] cœur commun : entités partagées ≥2 seeds
+                                    # (consolidées par le résolveur NK ; jadis en doublon).
 }
 
 def find_latest(canonical_path):
@@ -176,7 +208,49 @@ def find_latest(canonical_path):
     if name in PROMOTED_SEEDS:
         pipeline_canonical = DATA_DESAVOIE / name
         if pipeline_canonical.is_file() and pipeline_canonical.stat().st_size > 0:
+            # ── Garde anti-perte (fail-closed) ──────────────────────────────
+            # Le retour anticipé « je fais confiance au canonique promu » court-
+            # circuite le Test C (réduction de taille) plus bas. Or le pipeline
+            # émet parfois des .ftm.jsonl de 2 o dans data_desavoie (crash writer,
+            # résultat vide). Sans ce contrôle, deploy publierait ces 2 o par-
+            # dessus la production (des Mo), recalculerait le sha256 et pousserait
+            # sur GitHub Pages — perte totale, zéro erreur. On compte les ENTITÉS
+            # (pas les octets) et on REFUSE de régresser la production.
+            n_new, n_bad = count_ftm_entities(pipeline_canonical)
+            allow_shrink = os.environ.get("DEPLOY_ALLOW_SHRINK") == "1"
+            if n_bad:
+                warn(f"{name} : {n_bad} ligne(s) JSONL invalide(s) dans le "
+                     f"canonique promu ({pipeline_canonical.name}).")
+            if n_new == 0:
+                warn(f"{name} : canonique promu SANS ENTITÉ valide "
+                     f"({pipeline_canonical.stat().st_size:,} o) — "
+                     f"publication REFUSÉE, production conservée.")
+                return None, 0
+            # [2026-07-21] Référence de production ABSOLUE, en défense de fond.
+            # `canonical_path` dérive de SCRIPT_DIR : si deploy est lancé depuis un
+            # autre répertoire que la racine (ex. data_desavoie), il pointe vers un
+            # arbre inexistant, `exists()` est faux, et TOUTE cette moitié du garde
+            # est sautée en silence — on ne protège plus contre la régression, on
+            # croit seulement le faire. On vise donc la production réelle, avec repli
+            # sur le chemin dérivé si elle est absente.
+            _prod_ref = DOWNLOADS / "data" / name
+            if not _prod_ref.is_file():
+                _prod_ref = canonical_path
+            if _prod_ref.exists():
+                n_prod, _ = count_ftm_entities(_prod_ref)
+                if n_prod > 0:
+                    shrink = (n_prod - n_new) / n_prod
+                    if shrink > SIZE_SHRINK_THRESHOLD and not allow_shrink:
+                        warn(f"{name} : chute d'entités de {shrink:.0%} "
+                             f"({n_prod:,} → {n_new:,}) — publication REFUSÉE.")
+                        warn(f"  Si ce rétrécissement est voulu : "
+                             f"DEPLOY_ALLOW_SHRINK=1 python deploy.py")
+                        return None, 0
             return pipeline_canonical, 0
+        # Canonique promu absent ou de taille nulle : comportement historique
+        # préservé — on retombe sur la résolution par numéro Windows ci-dessous
+        # (le fichier de 0 o de data_desavoie n'est de toute façon pas candidat,
+        # le scan ne parcourt que Downloads et data/).
 
     suffix = canonical_path.suffix
     stem   = canonical_path.stem
