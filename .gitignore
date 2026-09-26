@@ -10,4 +10,8 @@
 !.gitignore
 !data/
 !data/*.jsonl
+# [2026-08-13] 2e set publié : dossier Sainte-Foy (data/sainte_foy/), gaté DEPLOY_PUBLISH_SAINTE_FOY
+!manifest_sainte_foy.json
+!data/sainte_foy/
+!data/sainte_foy/*.jsonl
 .deploy_config.json

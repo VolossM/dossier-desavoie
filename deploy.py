@@ -15,6 +15,20 @@ Strategie de versionnage :
   met a jour manifest.json, puis git add/commit/push.
 """
 
+# --- [venv-canonique] re-exec : relance sous le venv canonique si lancé par un interpréteur étranger (auto, idempotent) ---
+if __name__ == "__main__":
+    import os as _o, sys as _s
+    if _o.environ.get("DESAVOIE_VENV_REEXEC") != "1":
+        _d = _o.path.dirname(_o.path.abspath(__file__))
+        while _d and not _o.path.isfile(_o.path.join(_d, "resolver_bootstrap.py")):
+            _pp = _o.path.dirname(_d); _d = _pp if _pp != _d else ""
+        if _d and _d not in _s.path: _s.path.insert(0, _d)
+        try:
+            import resolver_bootstrap as _rb; _rb.ensure_canonical_venv()
+        except Exception:
+            pass
+# --- [/venv-canonique] ---
+
 import os, sys, re, json, hashlib, shutil, subprocess, argparse
 import http.server, threading, time, webbrowser, traceback
 from datetime import datetime, timezone
