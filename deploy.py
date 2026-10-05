@@ -46,6 +46,20 @@ DOWNLOADS    = Path(os.path.expanduser("~")) / "Downloads"
 DATA_DESAVOIE = DOWNLOADS / "data_desavoie"
 LOCAL_PORT   = 8080
 
+# ─────────────────────────────────────────────
+# Dossiers secondaires — publication séparée et gatée
+# ─────────────────────────────────────────────
+# Chaque dossier secondaire est un dossier d'investigation distinct, publié à
+# côté du dossier principal (DeSavoie/Chicherit) : son propre manifeste à la
+# racine (manifest_<id>.json) et ses données sous data/<id>/. Sa publication
+# est GATÉE par une variable d'environnement — il n'est résolu, haché et mis à
+# jour QUE si son gate vaut "1". Gate éteint ou manifeste absent → ignoré en
+# silence ; le dossier principal (manifest.json) n'est jamais affecté.
+SECONDARY_DOSSIERS = [
+    {"id": "sainte_foy", "manifest": "manifest_sainte_foy.json",
+     "gate": "DEPLOY_PUBLISH_SAINTE_FOY", "label": "Sainte-Foy"},
+]
+
 def find_git():
     """
     Cherche git dans le PATH puis dans les emplacements standard Windows.
@@ -371,6 +385,115 @@ def load_config():
     return {}
 
 # ─────────────────────────────────────────────
+# Dossiers secondaires actifs
+# ─────────────────────────────────────────────
+def secondary_manifests_active():
+    """Dossiers secondaires effectivement publiables : gate="1" ET manifeste
+    présent à la racine. Retourne [(cfg, chemin_manifeste), ...].
+
+    Si le gate est actif mais le manifeste absent, on le signale et on ignore
+    le dossier (publication partielle refusée plutôt que silencieuse)."""
+    active = []
+    for d in SECONDARY_DOSSIERS:
+        if os.environ.get(d["gate"]) != "1":
+            continue
+        mpath = SCRIPT_DIR / d["manifest"]
+        if mpath.exists():
+            active.append((d, mpath))
+        else:
+            warn(f"{d['manifest']} : {d['gate']}=1 mais manifeste absent — "
+                 f"dossier '{d['label']}' ignore.")
+    return active
+
+# ─────────────────────────────────────────────
+# Traitement d'un manifeste (principal ou secondaire)
+# ─────────────────────────────────────────────
+def process_manifest(manifest_path, dry_run):
+    """Résout et versionne les fichiers d'UN manifeste, vérifie leur intégrité
+    (sha256), puis met à jour ses champs sha256/version/size/deployed.
+
+    Réutilisé tel quel pour le dossier principal (manifest.json) et pour chaque
+    dossier secondaire actif (ex. manifest_sainte_foy.json) : même détection de
+    version Windows, même garde anti-régression (find_latest), même tableau de
+    statut. Ne pousse rien — l'add/commit/push reste global dans main().
+
+    Retourne (rows, new_files) : `rows` pour l'affichage, `new_files` la liste
+    des fichiers passés en "nouvelle version" (pour le message de commit)."""
+    if not manifest_path.exists():
+        fail(f"{manifest_path.name} introuvable dans {SCRIPT_DIR}")
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest_data = json.load(f)
+
+    files = manifest_data.get("files", [])
+    updates = []
+    rows = []
+
+    ST_OK  = "conforme"
+    ST_NEW = "nouvelle version"
+    ST_UNK = "non verifie"
+    ST_MIS = "absent"
+
+    for entry in files:
+        rel   = entry.get("path", "")
+        canon = SCRIPT_DIR / rel
+        found, ver_n = find_latest(canon)
+
+        if found is None:
+            rows.append((canon.name, "—", ST_MIS, "—", ""))
+            continue
+
+        if not dry_run and found != canon:
+            canon.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(found, canon)
+
+        target  = found if dry_run else canon
+        h_val   = sha256(target)
+        size    = target.stat().st_size
+        expected = entry.get("sha256", "")
+
+        if not expected:      status = ST_UNK
+        elif h_val == expected: status = ST_OK
+        else:                 status = ST_NEW
+
+        ver_label = f"v{ver_n}" if ver_n > 0 else "base"
+        rows.append((canon.name, ver_label, status, f"{size:,} o", h_val))
+        updates.append({"path": rel, "sha256": h_val, "version": ver_n, "size": size})
+
+    # Tableau de statut
+    w = max((len(r[0]) for r in rows), default=20) + 2
+    print(f"\n  {'Fichier':<{w}} {'Ver.':<8} {'Integrite':<18} Taille")
+    print(f"  {'─'*w} {'─'*8} {'─'*18} {'─'*12}")
+    for name, ver, status, size, _ in rows:
+        c = GRN if status == ST_OK else YLW if status in (ST_NEW, ST_UNK) else RED
+        print(f"  {name:<{w}} {ver:<8} {c}{status:<18}{R} {size}")
+
+    new_files = [r[0] for r in rows if r[2] == ST_NEW]
+
+    if dry_run:
+        return rows, new_files
+
+    # Mettre à jour le manifeste (champs d'intégrité)
+    changed = False
+    umap = {u["path"]: u for u in updates}
+    for entry in files:
+        u = umap.get(entry.get("path", ""))
+        if u and entry.get("sha256", "") != u["sha256"]:
+            entry["sha256"]   = u["sha256"]
+            entry["version"]  = u["version"]
+            entry["size"]     = u["size"]
+            entry["deployed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            changed = True
+    manifest_data["_last_deploy"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest_data, f, ensure_ascii=False, indent=2)
+    if changed:
+        ok(f"{manifest_path.name} mis a jour.")
+    else:
+        info(f"{manifest_path.name} inchange.")
+
+    return rows, new_files
+
+# ─────────────────────────────────────────────
 # Pipeline principal
 # ─────────────────────────────────────────────
 def main():
@@ -392,6 +515,12 @@ def main():
     # peuvent exister en version numerotée dans Downloads (index (1).html, etc.).
     # On les résout ici avant toute autre opération.
     ROOT_FILES = ["index.html", "manifest.json"]
+    # Dossiers secondaires actifs : leur manifeste racine est résolu comme les
+    # autres fichiers racine (copie de la version Windows la plus récente depuis
+    # Downloads, avec préservation des sha256 ci-dessous).
+    for d in SECONDARY_DOSSIERS:
+        if os.environ.get(d["gate"]) == "1":
+            ROOT_FILES.append(d["manifest"])
     for rname in ROOT_FILES:
         canon = SCRIPT_DIR / rname
         found, ver_n = find_latest(canon)
@@ -399,7 +528,7 @@ def main():
             # Pour manifest.json : préserver les champs d'intégrité (sha256, version,
             # size, deployed) calculés lors du déploiement précédent, afin d'éviter
             # de repasser en statut "non vérifié" à chaque import depuis Downloads.
-            if rname == "manifest.json" and canon.exists():
+            if rname.endswith(".json") and canon.exists():
                 try:
                     old_manifest = json.loads(canon.read_text(encoding="utf-8"))
                     new_manifest = json.loads(found.read_text(encoding="utf-8"))
@@ -436,74 +565,16 @@ def main():
 
     if not MANIFEST.exists():
         fail(f"manifest.json introuvable dans {SCRIPT_DIR}")
-    with open(MANIFEST, encoding="utf-8") as f:
-        manifest_data = json.load(f)
 
-    files = manifest_data.get("files", [])
-    updates = []
-    rows = []
-
-    ST_OK  = "conforme"
-    ST_NEW = "nouvelle version"
-    ST_UNK = "non verifie"
-    ST_MIS = "absent"
-
-    for entry in files:
-        rel   = entry.get("path", "")
-        canon = SCRIPT_DIR / rel
-        found, ver_n = find_latest(canon)
-
-        if found is None:
-            rows.append((canon.name, "—", ST_MIS, "—", ""))
-            continue
-
-        if not args.dry_run and found != canon:
-            canon.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(found, canon)
-
-        target  = found if args.dry_run else canon
-        h_val   = sha256(target)
-        size    = target.stat().st_size
-        expected = entry.get("sha256", "")
-
-        if not expected:      status = ST_UNK
-        elif h_val == expected: status = ST_OK
-        else:                 status = ST_NEW
-
-        ver_label = f"v{ver_n}" if ver_n > 0 else "base"
-        rows.append((canon.name, ver_label, status, f"{size:,} o", h_val))
-        updates.append({"path": rel, "sha256": h_val, "version": ver_n, "size": size})
-
-    # Tableau de statut
-    w = max((len(r[0]) for r in rows), default=20) + 2
-    print(f"\n  {'Fichier':<{w}} {'Ver.':<8} {'Integrite':<18} Taille")
-    print(f"  {'─'*w} {'─'*8} {'─'*18} {'─'*12}")
-    for name, ver, status, size, _ in rows:
-        c = GRN if status == ST_OK else YLW if status in (ST_NEW, ST_UNK) else RED
-        print(f"  {name:<{w}} {ver:<8} {c}{status:<18}{R} {size}")
+    # Dossier principal, puis chaque dossier secondaire actif (même traitement).
+    new_files = process_manifest(MANIFEST, args.dry_run)[1]
+    for d, mpath in secondary_manifests_active():
+        h(f"Dossier secondaire : {d['label']}  ({d['manifest']})")
+        new_files += process_manifest(mpath, args.dry_run)[1]
 
     if args.dry_run:
         info("Mode dry-run : aucune modification.")
         return
-
-    # Mettre a jour manifest.json
-    changed = False
-    umap = {u["path"]: u for u in updates}
-    for entry in files:
-        u = umap.get(entry.get("path", ""))
-        if u and entry.get("sha256", "") != u["sha256"]:
-            entry["sha256"]   = u["sha256"]
-            entry["version"]  = u["version"]
-            entry["size"]     = u["size"]
-            entry["deployed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-            changed = True
-    manifest_data["_last_deploy"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    with open(MANIFEST, "w", encoding="utf-8") as f:
-        json.dump(manifest_data, f, ensure_ascii=False, indent=2)
-    if changed:
-        ok("manifest.json mis a jour.")
-    else:
-        info("manifest.json inchange.")
 
     if args.hash_only:
         return
@@ -516,6 +587,8 @@ def main():
         "index.html", "manifest.json", "deploy.py", "setup.py", "init_git.py",
         ".gitignore", ".deploy_config.json", "README.md", "readme.md",
     }
+    # Manifestes des dossiers secondaires : légitimes même gate éteint.
+    ALLOWED_ROOT |= {d["manifest"] for d in SECONDARY_DOSSIERS}
     # Interroger Git directement plutôt qu'itérer sur le système de fichiers :
     # évite de scanner l'intégralité de Downloads si le dépôt y est hébergé.
     tracked_output = run("git ls-files", check=False).stdout.strip()
@@ -574,7 +647,7 @@ def main():
     run("git add -A")
 
     ts  = datetime.now().strftime("%Y-%m-%d %H:%M")
-    new_files = [r[0] for r in rows if r[2] == ST_NEW]
+    # new_files agrégé par process_manifest (principal + secondaires actifs).
     auto_msg  = f"deploy {ts}"
     if new_files:
         auto_msg += f" — {', '.join(new_files[:3])}"
