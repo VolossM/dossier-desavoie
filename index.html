@@ -134,6 +134,22 @@ body::before {
   text-transform: uppercase;
   margin-top: 1px;
 }
+/* Sélecteur de dossier (visible seulement si ≥2 dossiers sont servis) */
+#hd-dossier {
+  align-self: center;
+  margin-left: 14px;
+  background: rgba(255,255,255,0.05);
+  color: #e8e5e0;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+#hd-dossier:hover { border-color: var(--red); }
+#hd-dossier option { background: #1a1c22; color: #e8e5e0; }
 @media (max-width: 768px) {
   .hd-sub           { display: none; }
   .hd-axis-sub      { display: none; }
@@ -3965,6 +3981,50 @@ function loaderFile(path, state) {
 /* ═══════════════════════════════════════════════════════════
    MAIN LOAD & RENDER
 ═══════════════════════════════════════════════════════════ */
+// Construit le sélecteur de dossier dans l'en-tête. Ne l'affiche que si au
+// moins deux dossiers sont réellement servis : le manifeste du dossier actif
+// est déjà chargé (passé en argument), les autres sont sondés par un fetch —
+// un dossier absent (non publié / gate deploy.py éteint) est simplement omis.
+// Le changement de dossier recharge la page via ?d=<id> : état entièrement
+// réinitialisé (aucun double-rendu ni fuite d'écouteurs sur cette appli).
+async function buildDossierSelector(dossiers, active, activeManifest) {
+  const available = [];
+  for (const d of dossiers) {
+    if (d.id === active.id) {
+      available.push({ id: d.id, label: activeManifest.title || d.id });
+      continue;
+    }
+    try {
+      const r = await fetch(d.manifest);
+      if (!r.ok) continue;
+      const m = JSON.parse(await r.text());
+      available.push({ id: d.id, label: m.title || d.id });
+    } catch { /* dossier non servi : omis du sélecteur */ }
+  }
+  if (available.length < 2) return;
+
+  const host = document.querySelector('#app-header .hd-brand');
+  if (!host || document.getElementById('hd-dossier')) return;
+
+  const sel = document.createElement('select');
+  sel.id = 'hd-dossier';
+  sel.title = 'Changer de dossier';
+  sel.setAttribute('aria-label', 'Dossier');
+  for (const a of available) {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = a.label;
+    if (a.id === active.id) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', () => {
+    const p = new URLSearchParams(location.search);
+    p.set('d', sel.value);
+    location.search = p.toString();   // rechargement complet = état propre
+  });
+  host.appendChild(sel);
+}
+
 async function main() {
   const loader = document.getElementById('loader');
 
@@ -3993,15 +4053,30 @@ async function main() {
     return;
   }
 
-  // 1. Charger le manifest — nom canonique uniquement (deploy.py gère le versionnage)
+  // 1. Choix du dossier (conception A : dossiers distincts, publiés séparément).
+  // Chaque dossier a son manifeste racine ; le dossier actif est choisi par le
+  // paramètre d'URL ?d=<id> (défaut : le premier). Un dossier secondaire peut
+  // être absent (non publié / gate deploy.py éteint) : il est alors simplement
+  // introuvable, et le sélecteur ne le propose pas (voir buildDossierSelector).
+  const DOSSIERS = [
+    { id: 'desavoie',   manifest: 'manifest.json' },
+    { id: 'sainte_foy', manifest: 'manifest_sainte_foy.json' },
+  ];
+  const activeDossier =
+    DOSSIERS.find(d => d.id === new URLSearchParams(location.search).get('d'))
+    || DOSSIERS[0];
+
+  // Charger le manifest du dossier actif — nom canonique (deploy.py gère le versionnage)
   let manifest;
   let manifestText = null;
   try {
-    const r = await fetch('manifest.json');
+    const r = await fetch(activeDossier.manifest);
     if (r.ok) manifestText = await r.text();
   } catch {}
   if (!manifestText) {
-    loader.querySelector('.loader-text').textContent = 'Erreur : manifest.json introuvable';
+    loader.querySelector('.loader-text').textContent =
+      `Erreur : ${activeDossier.manifest} introuvable` +
+      (activeDossier.id !== DOSSIERS[0].id ? ' (dossier non publié ?)' : '');
     loader.querySelector('.loader-text').style.color = '#e74c3c';
     return;
   }
@@ -4014,7 +4089,7 @@ async function main() {
   const manifestVersion = 0; // versionnage géré par deploy.py, pas par le navigateur
   const manifestHash = await sha256hex(manifestText);
   FILE_REPORTS.push({
-    name: 'manifest.json',
+    name: activeDossier.manifest,
     version: manifestVersion,
     status: INT_UNKNOWN,  // le manifest lui-même ne peut pas se vérifier
     hash: manifestHash,
@@ -4024,7 +4099,7 @@ async function main() {
   // Log manifest
   const mvLabel = manifestVersion > 0 ? ` (${manifestVersion})` : '';
   console.log(
-    `%cmanifest${mvLabel}.json%c  ${manifestHash.slice(0,12)}…  ${(manifestText.length/1024).toFixed(1)} Ko  axes:${(manifest.axes||[]).length}  fichiers:${(manifest.files||[]).length}`,
+    `%c${activeDossier.manifest}${mvLabel}%c  ${manifestHash.slice(0,12)}…  ${(manifestText.length/1024).toFixed(1)} Ko  axes:${(manifest.axes||[]).length}  fichiers:${(manifest.files||[]).length}`,
     'font-weight:600;color:#1a1c22',
     'color:#6b6762'
   );
@@ -4034,6 +4109,9 @@ async function main() {
 
   document.getElementById('hd-title-el').textContent = manifest.title || '';
   document.getElementById('hd-sub-el').textContent   = manifest.subtitle || '';
+
+  // Sélecteur de dossier (n'apparaît que si ≥2 dossiers sont réellement servis)
+  await buildDossierSelector(DOSSIERS, activeDossier, manifest);
 
   // 2. Charger tous les JSONL avec détection de version et vérification hash
   const files = manifest.files || [];
