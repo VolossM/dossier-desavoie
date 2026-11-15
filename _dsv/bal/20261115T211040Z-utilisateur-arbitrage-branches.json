@@ -1,0 +1,13 @@
+{
+  "id": "20261115T211040Z-utilisateur-arbitrage-branches",
+  "etat": "ouvert",
+  "urgence": "action",
+  "destinataire": "utilisateur",
+  "expediteur": "claude:session-2026-11-15",
+  "sujet": "Arbitrer entre main et main-3663ct avant de fusionner la refonte",
+  "corps": "main-3663ct (3 commits, 2026-09-26 au 2026-10-05) et main (3 commits de leads, 2026-09-30 au 2026-10-03) ont divergé depuis eb35e5d et modifient tous deux deploy.py. La refonte du 2026-11-15 (branche claude/sleepy-hopper-15h56m) est fondée sur main. Dire laquelle fait foi ; détail dans _dsv/suivi/OBJECTIFS.md, objectif O1.",
+  "cree": "2026-11-15T21:10:40Z",
+  "dernier": "2026-11-15T21:10:40Z",
+  "occurrences": 1,
+  "cle": "arbitrage-branches"
+}

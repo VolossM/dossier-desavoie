@@ -1,0 +1,13 @@
+{
+  "id": "20261115T211040Z-utilisateur-incident-main-2026-11-15",
+  "etat": "ouvert",
+  "urgence": "info",
+  "destinataire": "utilisateur",
+  "expediteur": "claude:session-2026-11-15",
+  "sujet": "Incident : main écrasée puis restaurée le 2026-11-15",
+  "corps": "Un essai de setup.py en session Claude a poussé de force un commit de test (e6a1d8d) sur main. main a été restaurée sur 4927dae avec votre accord ; vérifier sur le poste que git status n'annonce aucune divergence avec origin/main. Si GitHub Pages est actif, deux reconstructions du site ont eu lieu.",
+  "cree": "2026-11-15T21:10:40Z",
+  "dernier": "2026-11-15T21:10:40Z",
+  "occurrences": 1,
+  "cle": "incident-main-2026-11-15"
+}
