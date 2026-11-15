@@ -4,11 +4,43 @@ setup.py — Creation du depot GitHub Pages et push initial
 Affaire DeSavoie / Chicherit — Frise d'investigation
 
 Usage : double-clic (lance par init_git.py) ou python setup.py
+        python setup.py --forcer-push   ecrase la branche main distante si le push est refuse
 Prérequis : Git installe, token GitHub Personnel (scope: repo)
 """
+__version__ = "2.0"
 
-import os, sys, json, base64, subprocess, urllib.request, urllib.error, getpass, traceback
+import os, sys, re, json, base64, urllib.request, urllib.error, getpass, traceback
 from pathlib import Path
+
+def _amorce(nom="dsv_commun"):
+    """Charge le socle commun (seul code duplique entre scripts). Ordre : `__version__`
+    du corps du fichier, puis numero Windows " (N)", puis horodatage."""
+    import importlib.util
+    if nom in sys.modules:
+        return sys.modules[nom]
+    vus, c = set(), []
+    for d in (Path(__file__).resolve().parent, Path.home() / "Downloads"):
+        for p in (d.glob(nom + "*.py") if d.is_dir() else ()):
+            m = re.fullmatch(re.escape(nom) + r"(?: \((\d+)\))?\.py", p.name)
+            if not m or p.resolve() in vus:
+                continue
+            vus.add(p.resolve())
+            tete = p.read_text(encoding="utf-8", errors="replace")[:8192]
+            v = re.search(r"^__version__\s*=\s*[\"']([\d.]+)[\"']", tete, re.M)
+            c.append((tuple(int(x) for x in v.group(1).split(".") if x) if v else (),
+                      int(m.group(1) or 0), p.stat().st_mtime, p))
+    if not c:
+        sys.exit(f"ERREUR : {nom}.py introuvable a cote de {Path(__file__).name} "
+                 f"ni dans {Path.home() / 'Downloads'}.")
+    spec = importlib.util.spec_from_file_location(nom, max(c)[3])
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[nom] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+commun = _amorce()
+from dsv_commun import R, B, RED, GRN, YLW, CYN, DIM, h, ok, warn, info, fail
 
 # ─────────────────────────────────────────────
 # Configuration
@@ -17,68 +49,11 @@ REPO_NAME        = "dossier-desavoie"
 REPO_DESCRIPTION = "Affaire DeSavoie/Chicherit — Frise d'investigation (confidentiel)"
 REPO_PRIVATE     = True   # False = public (Pages gratuit); True = necessite GitHub Pro pour Pages
 
-# ─────────────────────────────────────────────
-# Console helpers
-# ─────────────────────────────────────────────
-R="\033[0m"; B="\033[1m"; RED="\033[31m"; GRN="\033[32m"
-YLW="\033[33m"; CYN="\033[36m"; DIM="\033[2m"
-
-def h(t):    print(f"\n{B}{CYN}> {t}{R}")
-def ok(t):   print(f"  {GRN}ok{R}  {t}")
-def warn(t): print(f"  {YLW}!{R}   {t}")
-def info(t): print(f"  {DIM}{t}{R}")
-def fail(t): print(f"\n  {RED}{B}ERREUR :{R} {t}"); sys.exit(1)
-
-# ─────────────────────────────────────────────
-# Détection de Git (PATH restreint sous double-clic Windows)
-# ─────────────────────────────────────────────
-def find_git():
-    candidates = [
-        "git",
-        r"C:\Program Files\Git\cmd\git.exe",
-        r"C:\Program Files (x86)\Git\cmd\git.exe",
-        str(Path.home() / "AppData" / "Local" / "Programs" / "Git" / "cmd" / "git.exe"),
-        str(Path.home() / "scoop" / "apps" / "git" / "current" / "cmd" / "git.exe"),
-    ]
-    for candidate in candidates:
-        r = subprocess.run(f'"{candidate}" --version',
-                           shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
-        if r.returncode == 0:
-            return candidate
-    return None
-
-GIT = None  # initialise dans main()
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def run(cmd, cwd=None, check=True, env=None):
-    # cmd = liste d'arguments -> exécution sans shell (sûre : aucune interpolation
-    # de valeur variable dans une ligne de shell). cmd = chaîne -> shell (réservé
-    # aux commandes statiques). Le premier "git" est remplacé par le chemin résolu.
-    if isinstance(cmd, list):
-        argv = [GIT if a == "git" else a for a in cmd]
-        proc = subprocess.Popen(
-            argv, shell=False, cwd=cwd or SCRIPT_DIR,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
-        )
-    else:
-        full_cmd = cmd.replace("git ", f'"{GIT}" ', 1) if cmd.startswith("git ") else cmd
-        proc = subprocess.Popen(
-            full_cmd, shell=True, cwd=cwd or SCRIPT_DIR,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
-        )
-    raw_out, raw_err = proc.communicate()
-    r_stdout = raw_out.decode("utf-8", errors="replace")
-    r_stderr = raw_err.decode("utf-8", errors="replace")
-
-    class Result:
-        def __init__(self, rc, out, err):
-            self.returncode = rc; self.stdout = out; self.stderr = err
-
-    r = Result(proc.returncode, r_stdout, r_stderr)
-    if check and r.returncode != 0:
-        print(f"  stdout : {r.stdout.strip()}")
-        print(f"  stderr : {r.stderr.strip()}")
-        fail(f"Commande echouee : {cmd}")
-    return r
+    """Commande executee dans le dossier de setup.py (voir dsv_commun.run)."""
+    return commun.run(cmd, cwd=cwd or SCRIPT_DIR, check=check, env=env)
 
 def git_auth_env(username, token):
     """Environnement transmettant le token a git via GIT_CONFIG_* (en-tete HTTP
@@ -104,31 +79,31 @@ def api(method, path, data=None, token=None):
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read()), resp.status
     except urllib.error.HTTPError as e:
-        raw = e.read().decode()
+        raw = e.read().decode(errors="replace")
         try:    msg = json.loads(raw).get("message", raw)
-        except: msg = raw
+        except ValueError: msg = raw
+        commun.diagnostic("api-github", methode=method, endpoint=path, statut=e.code,
+                          reponse=raw, type_erreur="HTTPError")
         return {"error": msg}, e.code
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        # Reseau coupe, proxy, DNS, reponse non JSON : meme forme de retour (statut 0).
+        commun.diagnostic("api-github", exc=e, methode=method, endpoint=path,
+                          type_erreur=type(e).__name__)
+        return {"error": f"{type(e).__name__}: {e}"}, 0
 
 # ─────────────────────────────────────────────
 # Corps principal
 # ─────────────────────────────────────────────
 def main():
-    global GIT
-
     # 1. Prérequis
     h("Verification des prerequis")
     if sys.version_info < (3, 8):
         fail("Python 3.8+ requis.")
     ok(f"Python {sys.version_info.major}.{sys.version_info.minor}")
 
-    GIT = find_git()
-    if GIT is None:
+    if commun.find_git() is None:
         fail("Git non trouve. Installez Git : https://git-scm.com/downloads")
-    git_version = subprocess.run(f'"{GIT}" --version',
-                                 shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
-    ok(f"{git_version}  (chemin : {GIT})")
+    ok(f"{run('git --version').stdout.strip()}  (chemin : {commun.git()})")
 
     # 2. Token GitHub
     h("Token GitHub Personnel")
@@ -191,8 +166,8 @@ def main():
     # 5. .gitignore
     gi = os.path.join(SCRIPT_DIR, ".gitignore")
     if not os.path.exists(gi):
-        with open(gi, "w") as f:
-            f.write("__pycache__/\n*.pyc\n.DS_Store\nThumbs.db\n.env\n.deploy_config.json\n")
+        with open(gi, "w", encoding="utf-8") as f:
+            f.write(commun.GITIGNORE)
         ok(".gitignore cree.")
     elif ".deploy_config.json" not in open(gi).read():
         with open(gi, "a") as f:
@@ -204,7 +179,9 @@ def main():
     #    de GitHub car il contenait autrefois le token en clair)
     h("Nettoyage secrets — historique Git")
     tracked = run("git ls-files .deploy_config.json", check=False).stdout.strip()
+    historique_reecrit = False
     if tracked:
+        historique_reecrit = True
         run("git rm --cached .deploy_config.json")
         warn(".deploy_config.json retire du suivi Git (ne sera plus versionne).")
         # Vérifier si le commit devient vide après le retrait du fichier.
@@ -240,13 +217,21 @@ def main():
     push_env = git_auth_env(username, token)
     pr = run(["git", "push", "-u", "origin", "main"], check=False, env=push_env)
     if pr.returncode != 0:
-        # Force push nécessaire si l'historique a été réécrit par amend
-        pr = run(["git", "push", "-u", "origin", "main", "--force"], check=False, env=push_env)
+        # Le push force ecrase la branche main distante. Il n'est tente que dans les
+        # deux cas ou c'est l'intention : l'historique vient d'etre reecrit ci-dessus
+        # pour effacer un secret, ou l'utilisateur l'a demande (--forcer-push).
+        # [2026-11-15] Auparavant inconditionnel : lance depuis un dossier sans
+        # historique, setup.py remplacait alors tout le depot distant par un commit
+        # initial, sans avertissement.
+        if historique_reecrit or "--forcer-push" in sys.argv:
+            warn("Push refuse — nouvelle tentative avec --force (historique reecrit ou --forcer-push).")
+            pr = run(["git", "push", "-u", "origin", "main", "--force"], check=False, env=push_env)
         if pr.returncode != 0:
-            print(f"\n  {RED}Erreur push :{R}")
-            print(f"  stdout : {pr.stdout.strip()}")
-            print(f"  stderr : {pr.stderr.strip()}")
-            fail("Push echoue. Verifiez ci-dessus.")
+            commun.diagnostic("git-push", code=pr.returncode, stdout=pr.stdout.strip(),
+                              stderr=pr.stderr.strip(),
+                              historique=run("git log --oneline -5", check=False).stdout)
+            fail("Push echoue : la branche main distante contient des commits absents d'ici. "
+                 "Recuperez-les (git pull origin main) ; --forcer-push ECRASE le depot distant.")
     ok("Push effectue.")
 
     # 7. GitHub Pages
@@ -298,11 +283,9 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         pass
-    except Exception:
-        print(f"\n  {RED}{B}Erreur inattendue :{R}")
-        traceback.print_exc()
+    except Exception as exc:
+        print(f"\n  {RED}{B}Erreur inattendue :{R}", flush=True)
+        traceback.print_exc(file=sys.stdout)
+        commun.diagnostic("setup-exception", exc=exc)
     finally:
-        try:
-            input("\n  Appuyez sur Entree pour fermer...")
-        except Exception:
-            pass
+        commun.pause_finale()

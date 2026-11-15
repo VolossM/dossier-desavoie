@@ -15,70 +15,44 @@ Ce script est le seul point d'entrée manuel. Il :
 Usage : double-clic sur init_git.py depuis n'importe quel emplacement.
 Prérequis : Git installé (https://git-scm.com/downloads), Python 3.8+.
 """
+__version__ = "2.0"
 
-import os, sys, re, subprocess, shutil, traceback
+import os, sys, re, subprocess, traceback
 from pathlib import Path
 
-# ─────────────────────────────────────────────
-# Console helpers
-# ─────────────────────────────────────────────
-R="\033[0m"; B="\033[1m"; RED="\033[31m"; GRN="\033[32m"
-YLW="\033[33m"; CYN="\033[36m"; DIM="\033[2m"
+def _amorce(nom="dsv_commun"):
+    """Charge le socle commun (seul code duplique entre scripts). Ordre : `__version__`
+    du corps du fichier, puis numero Windows " (N)", puis horodatage."""
+    import importlib.util
+    if nom in sys.modules:
+        return sys.modules[nom]
+    vus, c = set(), []
+    for d in (Path(__file__).resolve().parent, Path.home() / "Downloads"):
+        for p in (d.glob(nom + "*.py") if d.is_dir() else ()):
+            m = re.fullmatch(re.escape(nom) + r"(?: \((\d+)\))?\.py", p.name)
+            if not m or p.resolve() in vus:
+                continue
+            vus.add(p.resolve())
+            tete = p.read_text(encoding="utf-8", errors="replace")[:8192]
+            v = re.search(r"^__version__\s*=\s*[\"']([\d.]+)[\"']", tete, re.M)
+            c.append((tuple(int(x) for x in v.group(1).split(".") if x) if v else (),
+                      int(m.group(1) or 0), p.stat().st_mtime, p))
+    if not c:
+        sys.exit(f"ERREUR : {nom}.py introuvable a cote de {Path(__file__).name} "
+                 f"ni dans {Path.home() / 'Downloads'}.")
+    spec = importlib.util.spec_from_file_location(nom, max(c)[3])
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[nom] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
-def h(t):    print(f"\n{B}{CYN}> {t}{R}")
-def ok(t):   print(f"  {GRN}ok{R}  {t}")
-def warn(t): print(f"  {YLW}!{R}   {t}")
-def info(t): print(f"  {DIM}{t}{R}")
-def fail(t): print(f"\n  {RED}{B}ERREUR :{R} {t}"); sys.exit(1)
+
+commun = _amorce()
+from dsv_commun import R, B, RED, GRN, YLW, CYN, DIM, h, ok, warn, info, fail
 
 def run(cmd, cwd=None, check=True):
-    r = subprocess.run(cmd, shell=True, cwd=str(cwd or DOWNLOADS),
-                       capture_output=True, text=True)
-    if check and r.returncode != 0:
-        print(f"  stdout : {r.stdout.strip()}")
-        print(f"  stderr : {r.stderr.strip()}")
-        fail(f"Commande echouee : {cmd}")
-    return r
-
-# ─────────────────────────────────────────────
-# Détection de la version la plus récente d'un fichier
-# Windows renomme les doublons : "setup.py", "setup (1).py", etc.
-# ─────────────────────────────────────────────
-def find_latest(folder: Path, stem: str, suffix: str) -> Path | None:
-    """Retourne le chemin de la version la plus récente de stem+suffix dans folder."""
-    candidates = []
-    base = folder / f"{stem}{suffix}"
-    if base.exists():
-        candidates.append((0, base))
-    for n in range(1, 10):
-        v = folder / f"{stem} ({n}){suffix}"
-        if v.exists():
-            candidates.append((n, v))
-    if not candidates:
-        return None
-    return max(candidates, key=lambda x: x[0])[1]
-
-# ─────────────────────────────────────────────
-# Contenu du .gitignore : exclure tout Downloads
-# sauf les fichiers du projet DeSavoie
-# ─────────────────────────────────────────────
-GITIGNORE = """\
-# Downloads — exclure tout par defaut
-*
-
-# Reintegrer uniquement les fichiers du projet DeSavoie/Chicherit
-!index.html
-!setup.py
-!deploy.py
-!manifest.json
-!init_git.py
-!.gitignore
-!data/
-!data/*.jsonl
-
-# .deploy_config.json : JAMAIS versionne (peut contenir des identifiants).
-# Reste local ; regenere par setup.py. Exclu par le "*" ci-dessus.
-"""
+    """Commande executee dans Downloads (voir dsv_commun.run)."""
+    return commun.run(cmd, cwd=cwd or DOWNLOADS, check=check)
 
 # ─────────────────────────────────────────────
 # Corps principal
@@ -92,10 +66,9 @@ def main():
         fail("Python 3.8+ requis.")
     ok(f"Python {sys.version_info.major}.{sys.version_info.minor}")
 
-    git_v = subprocess.run("git --version", shell=True, capture_output=True, text=True)
-    if git_v.returncode != 0:
+    if commun.find_git() is None:
         fail("Git non trouve. Installez Git : https://git-scm.com/downloads")
-    ok(git_v.stdout.strip())
+    ok(f"{run('git --version', cwd=Path.home()).stdout.strip()}  (chemin : {commun.git()})")
 
     if not DOWNLOADS.exists():
         fail(f"Dossier Downloads introuvable : {DOWNLOADS}")
@@ -106,7 +79,7 @@ def main():
     gi = DOWNLOADS / ".gitignore"
     if gi.exists():
         warn(".gitignore existant — remplacement.")
-    gi.write_text(GITIGNORE, encoding="utf-8")
+    gi.write_text(commun.GITIGNORE, encoding="utf-8")
     ok(".gitignore ecrit (exclusion totale de Downloads sauf fichiers projet).")
 
     # 3. Git init (idempotent)
@@ -124,15 +97,21 @@ def main():
 
     # 4. Détection de setup.py (avec versionning Windows)
     h("Detection de setup.py")
-    setup_path = find_latest(DOWNLOADS, "setup", ".py")
+    # Empreinte REPO_NAME : écarte un setup.py homonyme d'un autre projet.
+    setup_path, _ = commun.meilleure_version(
+        "setup.py", [DOWNLOADS], empreinte='REPO_NAME        = "dossier-desavoie"')
     if setup_path is None:
-        fail("setup.py introuvable dans Downloads. Telechargez-le d'abord.")
+        commun.diagnostic("detection-setup", dossier=str(DOWNLOADS),
+                          candidats=sorted(p.name for p in DOWNLOADS.glob("setup*.py")))
+        fail("setup.py du projet introuvable dans Downloads. Telechargez-le d'abord.")
 
     if setup_path.name != "setup.py":
-        # Renommer la version détectée en "setup.py" canonique
+        # Copier la version détectée sous le nom canonique, sous garde anti-corruption
         canon = DOWNLOADS / "setup.py"
         warn(f"Version trouvee : {setup_path.name} — copie vers setup.py canonique.")
-        shutil.copy2(setup_path, canon)
+        copie, motif = commun.copier_garde(setup_path, canon)
+        if not copie:
+            fail(f"{setup_path.name} refuse ({motif}) — setup.py en place conserve.")
         setup_path = canon
     ok(f"setup.py : {setup_path}")
 
@@ -157,13 +136,9 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         pass
-    except Exception:
-        print(f"\n  {RED}{B}Erreur inattendue :{R}")
-        traceback.print_exc()
+    except Exception as exc:
+        print(f"\n  {RED}{B}Erreur inattendue :{R}", flush=True)
+        traceback.print_exc(file=sys.stdout)
+        commun.diagnostic("init-git-exception", exc=exc)
     finally:
-        # Pause uniquement si setup.py n'a pas pris le relais
-        # (si setup.py a été lancé, c'est lui qui gère la pause finale)
-        try:
-            input("\n  init_git.py termine. Appuyez sur Entree pour fermer...")
-        except Exception:
-            pass
+        commun.pause_finale("init_git.py termine. Appuyez sur Entree pour fermer...")

@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """
 deploy.py — Deploiement versionne du dossier DeSavoie/Chicherit
+Depot : dossier-desavoie. Point d'entree unique recommande : python dsv.py
+
 Usage :
   python deploy.py                  detecte versions, met a jour manifest, push GitHub
   python deploy.py --local          serveur HTTP local uniquement (port 8080)
   python deploy.py --dry-run        simule sans push ni modification
   python deploy.py -m "commentaire" message de commit personnalise
   python deploy.py --hash-only      recalcule les hashes sans push
+  python deploy.py --purger-intrus  retire du suivi Git les fichiers etrangers au projet
+
+Aucune question n'est posee en cours d'execution : tout ce qui demande une
+decision (publication refusee, fichier etranger, push echoue) est depose dans
+la boite aux lettres _dsv/bal (voir dsv_bal.py).
 
 Strategie de versionnage :
   Windows ajoute " (1)", " (2)"... aux fichiers telecharges en double.
@@ -14,11 +21,43 @@ Strategie de versionnage :
   copie le fichier sous le nom canonique, calcule son SHA-256,
   met a jour manifest.json, puis git add/commit/push.
 """
+__version__ = "2.0"
 
-import os, sys, re, json, hashlib, shutil, subprocess, argparse
+import os, sys, re, json, shutil, argparse
 import http.server, threading, time, webbrowser, traceback
 from datetime import datetime, timezone
 from pathlib import Path
+
+def _amorce(nom="dsv_commun"):
+    """Charge le socle commun (seul code duplique entre scripts). Ordre : `__version__`
+    du corps du fichier, puis numero Windows " (N)", puis horodatage."""
+    import importlib.util
+    if nom in sys.modules:
+        return sys.modules[nom]
+    vus, c = set(), []
+    for d in (Path(__file__).resolve().parent, Path.home() / "Downloads"):
+        for p in (d.glob(nom + "*.py") if d.is_dir() else ()):
+            m = re.fullmatch(re.escape(nom) + r"(?: \((\d+)\))?\.py", p.name)
+            if not m or p.resolve() in vus:
+                continue
+            vus.add(p.resolve())
+            tete = p.read_text(encoding="utf-8", errors="replace")[:8192]
+            v = re.search(r"^__version__\s*=\s*[\"']([\d.]+)[\"']", tete, re.M)
+            c.append((tuple(int(x) for x in v.group(1).split(".") if x) if v else (),
+                      int(m.group(1) or 0), p.stat().st_mtime, p))
+    if not c:
+        sys.exit(f"ERREUR : {nom}.py introuvable a cote de {Path(__file__).name} "
+                 f"ni dans {Path.home() / 'Downloads'}.")
+    spec = importlib.util.spec_from_file_location(nom, max(c)[3])
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[nom] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+commun = _amorce()
+from dsv_commun import (R, B, RED, GRN, YLW, CYN, DIM, h, ok, warn, info, fail,
+                        sha256, signaler)
 
 # ─────────────────────────────────────────────
 # Configuration
@@ -32,69 +71,9 @@ DOWNLOADS    = Path(os.path.expanduser("~")) / "Downloads"
 DATA_DESAVOIE = DOWNLOADS / "data_desavoie"
 LOCAL_PORT   = 8080
 
-def find_git():
-    """
-    Cherche git dans le PATH puis dans les emplacements standard Windows.
-    Nécessaire en double-clic : Python hérite d'un PATH restreint qui peut
-    exclure Git même s'il est installé.
-    """
-    candidates = [
-        "git",
-        r"C:\Program Files\Git\cmd\git.exe",
-        r"C:\Program Files (x86)\Git\cmd\git.exe",
-        str(Path.home() / "AppData" / "Local" / "Programs" / "Git" / "cmd" / "git.exe"),
-        str(Path.home() / "scoop" / "apps" / "git" / "current" / "cmd" / "git.exe"),
-    ]
-    for c in candidates:
-        r = subprocess.run(
-            f'"{c}" --version', shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        if r.returncode == 0:
-            return c
-    return None
-
-GIT = find_git() or "git"  # résolu au chargement du module
-
-# ─────────────────────────────────────────────
-# Console helpers
-# ─────────────────────────────────────────────
-R="\033[0m"; B="\033[1m"; RED="\033[31m"; GRN="\033[32m"
-YLW="\033[33m"; CYN="\033[36m"; DIM="\033[2m"
-
-def h(t):    print(f"\n{B}{CYN}> {t}{R}")
-def ok(t):   print(f"  {GRN}ok{R}  {t}")
-def warn(t): print(f"  {YLW}!{R}   {t}")
-def info(t): print(f"  {DIM}{t}{R}")
-def fail(t): print(f"\n  {RED}{B}ERREUR :{R} {t}"); sys.exit(1)
-
-def run(cmd, cwd=None, check=True):
-    full_cmd = cmd.replace("git ", f'"{GIT}" ', 1) if cmd.startswith("git ") else cmd
-    proc = subprocess.Popen(
-        full_cmd, shell=True, cwd=cwd or SCRIPT_DIR,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
-    raw_out, raw_err = proc.communicate()
-    r_stdout = raw_out.decode("utf-8", errors="replace")
-    r_stderr = raw_err.decode("utf-8", errors="replace")
-
-    class Result:
-        def __init__(self, rc, out, err):
-            self.returncode = rc; self.stdout = out; self.stderr = err
-
-    r = Result(proc.returncode, r_stdout, r_stderr)
-    if check and r.returncode != 0:
-        print(f"  stdout : {r.stdout.strip()}")
-        print(f"  stderr : {r.stderr.strip()}")
-        fail(f"Commande echouee : {cmd}")
-    return r
-
-def sha256(path):
-    h_ = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h_.update(chunk)
-    return h_.hexdigest()
+def run(cmd, cwd=None, check=True, env=None):
+    """Commande exécutée dans le dossier de deploy.py (voir dsv_commun.run)."""
+    return commun.run(cmd, cwd=cwd or SCRIPT_DIR, check=check, env=env)
 
 # ─────────────────────────────────────────────
 # Empreintes textuelles des fichiers du projet
@@ -122,46 +101,12 @@ def fingerprint_for(name):
             return fp
     return None
 
-def file_matches(path, fingerprint):
-    """Vérifie que le fichier contient l'empreinte (lecture partielle, max 8 Ko)."""
-    if fingerprint is None:
-        return True   # pas d'empreinte définie = on accepte sans vérification
-    try:
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
-            head = f.read(8192)
-        return fingerprint in head
-    except OSError:
-        return False
-
-def count_ftm_entities(path):
-    """
-    Compte les entités FtM valides d'un .ftm.jsonl : lignes JSON qui décodent
-    en objet portant un `id` non vide. Retourne (n_valides, n_invalides).
-    Tolérant — ne lève jamais (renvoie (0, 0) si le fichier est illisible).
-
-    Sert de garde anti-perte au déploiement : le pipeline émet parfois des
-    .ftm.jsonl de 2 octets (crash writer, résultat vide) dans data_desavoie —
-    un simple `st_size > 0` les laisse passer, ce contrôle par entités non.
-    """
-    n_ok = n_bad = 0
-    try:
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                except (json.JSONDecodeError, ValueError):
-                    n_bad += 1
-                    continue
-                if isinstance(obj, dict) and obj.get("id"):
-                    n_ok += 1
-                else:
-                    n_bad += 1
-    except OSError:
-        return 0, 0
-    return n_ok, n_bad
+# Contrôle d'empreinte et comptage d'entités : implémentés dans dsv_commun.
+# count_ftm_entities sert de garde anti-perte au déploiement : le pipeline émet
+# parfois des .ftm.jsonl de 2 octets (crash writer, résultat vide) dans
+# data_desavoie — un simple `st_size > 0` les laisse passer, ce contrôle non.
+file_matches       = commun.contient
+count_ftm_entities = commun.compter_entites
 
 # ─────────────────────────────────────────────
 # Détection robuste : version Windows + empreinte
@@ -366,6 +311,8 @@ def main():
     parser.add_argument("--dry-run",   action="store_true")
     parser.add_argument("--hash-only", action="store_true")
     parser.add_argument("--no-open",   action="store_true")
+    parser.add_argument("--purger-intrus", action="store_true",
+                        help="Retire du suivi Git les fichiers etrangers au projet")
     args = parser.parse_args()
 
     if args.local:
@@ -382,6 +329,19 @@ def main():
         canon = SCRIPT_DIR / rname
         found, ver_n = find_latest(canon)
         if found is not None and found != canon and ver_n > 0:
+            # Garde anti-corruption avant écrasement (manifest : JSON valide requis).
+            accepte, motif = commun.garde_ecrasement(found, canon)
+            if not accepte:
+                warn(f"{rname} : {found.name} REFUSÉ ({motif}) — version en place conservée.")
+                signaler("utilisateur", f"deploy : {rname} refusé",
+                         f"{found} n'a pas remplacé {canon} : {motif}.",
+                         urgence="action", cle=f"deploy-refus-{rname}")
+                continue
+            if motif:
+                warn(f"{rname} : {motif}.")
+            if args.dry_run:
+                info(f"{rname} : version {ver_n} disponible ({found.name}) — non copiée (dry-run).")
+                continue
             # Pour manifest.json : préserver les champs d'intégrité (sha256, version,
             # size, deployed) calculés lors du déploiement précédent, afin d'éviter
             # de repasser en statut "non vérifié" à chaque import depuis Downloads.
@@ -407,6 +367,7 @@ def main():
                     )
                     ok(f"{rname} : version {ver_n} fusionnee depuis {found.name} (sha256 preserves)")
                 except Exception as exc:
+                    commun.diagnostic("fusion-manifest", exc=exc, source=str(found), cible=str(canon))
                     warn(f"{rname} : fusion impossible ({exc}) — copie brute.")
                     shutil.copy2(found, canon)
                     ok(f"{rname} : version {ver_n} copiee depuis {found.name}")
@@ -433,6 +394,9 @@ def main():
     ST_NEW = "nouvelle version"
     ST_UNK = "non verifie"
     ST_MIS = "absent"
+    ST_REF = "refuse"
+    refuses = []
+    absents = []
 
     for entry in files:
         rel   = entry.get("path", "")
@@ -441,11 +405,24 @@ def main():
 
         if found is None:
             rows.append((canon.name, "—", ST_MIS, "—", ""))
+            absents.append(canon.name)
             continue
 
-        if not args.dry_run and found != canon:
-            canon.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(found, canon)
+        if found != canon:
+            # Garde anti-régression avant écrasement de la production : mêmes règles
+            # que pour les seeds promus (entités comptées, pas octets).
+            accepte, motif = commun.garde_ecrasement(
+                found, canon, os.environ.get("DEPLOY_ALLOW_SHRINK") == "1")
+            if not accepte:
+                warn(f"{canon.name} : {found.name} REFUSÉ ({motif}) — production conservée.")
+                refuses.append(f"{canon.name} <- {found} : {motif}")
+                rows.append((canon.name, f"v{ver_n}" if ver_n > 0 else "base", ST_REF, "—", ""))
+                continue
+            if motif:
+                warn(f"{canon.name} : {motif}.")
+            if not args.dry_run:
+                canon.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(found, canon)
 
         target  = found if args.dry_run else canon
         h_val   = sha256(target)
@@ -471,6 +448,16 @@ def main():
     if args.dry_run:
         info("Mode dry-run : aucune modification.")
         return
+
+    # Publications refusées ou fichiers introuvables : une décision est attendue.
+    # (find_latest renvoie None aussi bien pour « absent » que pour « refusé par
+    # la garde des seeds promus » : les avertissements ci-dessus font foi.)
+    if refuses or absents:
+        signaler("utilisateur", "deploy : fichiers non publiés",
+                 "\n".join(["Refusés par la garde anti-régression :"] + refuses
+                           + ["Absents ou refusés en amont (voir le journal du run) :"] + absents
+                           + ["Si une réduction est voulue : DEPLOY_ALLOW_SHRINK=1 python deploy.py"]),
+                 urgence="action", cle="deploy-non-publies")
 
     # Mettre a jour manifest.json
     changed = False
@@ -498,10 +485,7 @@ def main():
     h("Nettoyage des fichiers non reconnus")
 
     # Fichiers autorisés à la racine du dépôt
-    ALLOWED_ROOT = {
-        "index.html", "manifest.json", "deploy.py", "setup.py", "init_git.py",
-        ".gitignore", ".deploy_config.json", "README.md", "readme.md",
-    }
+    ALLOWED_ROOT = commun.FICHIERS_RACINE
     # Interroger Git directement plutôt qu'itérer sur le système de fichiers :
     # évite de scanner l'intégralité de Downloads si le dépôt y est hébergé.
     tracked_output = run("git ls-files", check=False).stdout.strip()
@@ -520,64 +504,95 @@ def main():
         print(f"  {YLW}{B}Fichiers non reconnus suivis par Git :{R}")
         for s in strangers:
             print(f"    {RED}\u2022{R} {s.name}  ({s.stat().st_size:,} o)")
-        print()
-        print(f"  Ces fichiers sont publics sur GitHub mais n'appartiennent")
-        print(f"  pas au projet DeSavoie.")
-        print()
-        try:
-            rep = input(f"  Retirer du suivi Git et ajouter au .gitignore ? [o/N] ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            rep = "n"
-        if rep == "o":
+        if args.purger_intrus:
             gitignore = SCRIPT_DIR / ".gitignore"
             existing  = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
             additions = []
-            for s in strangers:
-                run(f'git rm --cached "{s.name}"', check=False)
-                if s.name not in existing:
-                    additions.append(s.name)
-                ok(f"{s.name} retire du suivi Git.")
+            for s_ in strangers:
+                run(["git", "rm", "--cached", s_.name], check=False)
+                if s_.name not in existing:
+                    additions.append(s_.name)
+                ok(f"{s_.name} retire du suivi Git.")
             if additions:
                 with open(gitignore, "a", encoding="utf-8") as f:
                     f.write("\n# Fichiers non-DeSavoie exclus automatiquement\n")
-                    for a in additions:
-                        f.write(f"{a}\n")
+                    for a_ in additions:
+                        f.write(f"{a_}\n")
                 ok(f".gitignore mis a jour ({len(additions)} entree(s) ajoutee(s)).")
         else:
-            info("Nettoyage annule — fichiers conserves tels quels.")
+            warn("Fichiers conserves. Pour les retirer : python deploy.py --purger-intrus")
+            signaler("utilisateur", "deploy : fichiers étrangers suivis par Git",
+                     "Suivis par Git à la racine sans appartenir au projet : "
+                     + ", ".join(x.name for x in strangers)
+                     + ". Retrait : python deploy.py --purger-intrus",
+                     urgence="action", cle="deploy-intrus")
     else:
         ok("Aucun fichier non reconnu a la racine.")
 
     # Git
     h("Git")
-    if not run("git status --porcelain", check=False).stdout.strip():
-        ok("Aucun changement — deja a jour.")
-        cfg = load_config()
+    cfg = load_config()
+    remote = cfg.get("remote_auth") or "origin"
+
+    # Les .jsonl sont stockés sans conversion de fins de ligne (.gitattributes) :
+    # réaligner l'index sur les octets réellement hachés dans manifest.json.
+    run("git add --renormalize -- data", check=False)
+    if run("git status --porcelain", check=False).stdout.strip():
+        run("git add -A")
+        ts  = datetime.now().strftime("%Y-%m-%d %H:%M")
+        new_files = [r[0] for r in rows if r[2] == ST_NEW]
+        auto_msg  = f"deploy {ts}"
+        if new_files:
+            auto_msg += f" — {', '.join(new_files[:3])}"
+            if len(new_files) > 3:
+                auto_msg += f" +{len(new_files)-3}"
+        msg = args.message or auto_msg
+        run(["git", "commit", "-m", msg])
+        ok(f"Commit : {msg}")
+    else:
+        ok("Aucun changement local.")
+
+    # Synchronisation : intégrer ce que le dépôt distant a reçu entre-temps
+    # (branche fusionnée depuis une session Claude, réponse en boîte aux lettres).
+    # Sans cela, le push serait rejeté (non-fast-forward) dès que main a avancé.
+    a_pousser = True
+    fetch = run(["git", "fetch", remote, "main"], check=False)
+    if fetch.returncode != 0:
+        warn(f"Lecture du depot distant impossible : {commun.masquer(fetch.stderr.strip())}")
+    else:
+        retard = run("git rev-list --count HEAD..FETCH_HEAD", check=False).stdout.strip()
+        avance = run("git rev-list --count FETCH_HEAD..HEAD", check=False).stdout.strip()
+        if retard not in ("", "0"):
+            rb = run("git rebase FETCH_HEAD", check=False)
+            if rb.returncode != 0:
+                run("git rebase --abort", check=False)
+                diag = commun.diagnostic("git-rebase", code=rb.returncode,
+                                         stdout=rb.stdout.strip(), stderr=rb.stderr.strip())
+                warn("Le depot distant a diverge et la fusion automatique a echoue — rien n'est pousse.")
+                signaler("claude", "deploy : divergence avec origin/main",
+                         f"{retard} commit(s) distants en conflit avec le commit local ; "
+                         "rebase annulé, dépôt local intact, push non effectué.",
+                         urgence="bloquant", cle="deploy-divergence", diag=diag)
+                return
+            ok(f"{retard} commit(s) distant(s) integre(s).")
+        a_pousser = avance not in ("", "0")
+
+    if not a_pousser:
+        ok("Deja a jour avec le depot distant.")
         if cfg.get("pages_url"):
             print(f"\n  URL : {CYN}{cfg['pages_url']}{R}\n")
         return
 
-    run("git add -A")
-
-    ts  = datetime.now().strftime("%Y-%m-%d %H:%M")
-    new_files = [r[0] for r in rows if r[2] == ST_NEW]
-    auto_msg  = f"deploy {ts}"
-    if new_files:
-        auto_msg += f" — {', '.join(new_files[:3])}"
-        if len(new_files) > 3:
-            auto_msg += f" +{len(new_files)-3}"
-    msg = args.message or auto_msg
-    run(f'git commit -m "{msg}"')
-    ok(f"Commit : {msg}")
-
-    # Push
-    cfg = load_config()
-    remote = cfg.get("remote_auth") or "origin"
-    push_cmd = f"git push {remote} main" if remote != "origin" else "git push origin main"
-    pr = run(push_cmd, check=False)
+    pr = run(["git", "push", remote, "HEAD:main"], check=False)
     if pr.returncode != 0:
-        warn(f"Push echoue : {pr.stderr.strip()}")
+        diag = commun.diagnostic("git-push", code=pr.returncode,
+                                 stdout=pr.stdout.strip(), stderr=pr.stderr.strip(),
+                                 statut=run("git status -sb", check=False).stdout[:500])
+        warn(f"Push echoue : {commun.masquer(pr.stderr.strip())}")
         warn("Relancez manuellement : git push origin main")
+        signaler("utilisateur", "deploy : push échoué",
+                 "Le commit local existe mais n'a pas été poussé sur origin/main.",
+                 urgence="action", cle="deploy-push", diag=diag)
     else:
         ok("Push effectue.")
 
@@ -595,9 +610,14 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except SystemExit:
-        pass
-    except Exception:
+    except SystemExit as exc:
+        # Code de sortie inchangé (0) pour ne pas modifier le comportement du BAT
+        # appelant ; l'échec est tracé dans la boîte aux lettres.
+        if exc.code not in (None, 0):
+            signaler("claude", "deploy : arrêt sur erreur",
+                     "deploy.py s'est arrêté sur fail() ; diagnostic de la dernière action joint.",
+                     urgence="bloquant", cle="deploy-arret", diag=commun.DERNIER_DIAG)
+    except Exception as exc:
         # [PATCH_TRACE_VISIBLE_v1] (rev.32 B4 du 12/06/2026)
         # Forcer traceback.print_exc() sur sys.stdout pour que la trace
         # apparaisse sur le même flux que le print() du label. Le BAT
@@ -608,12 +628,12 @@ if __name__ == "__main__":
         print(f"\n  {RED}{B}Erreur inattendue :{R}", flush=True)
         traceback.print_exc(file=sys.stdout)
         sys.stdout.flush()
+        signaler("claude", "deploy : erreur inattendue", f"{type(exc).__name__}: {exc}",
+                 urgence="bloquant", cle="deploy-exception",
+                 diag=commun.diagnostic("deploy-exception", exc=exc, arguments=sys.argv[1:]))
     finally:
         # Pas de pause en mode --local (le serveur tourne en boucle, Ctrl+C pour quitter)
-        # [PATCH_NO_PAUSE_v1] (rev.32 B4 bis) Skip input() bloquant si pipeline
-        # non-interactif (variable PIPELINE_NO_PAUSE=1 ou stdin non-TTY).
-        if "--local" not in sys.argv and not (os.environ.get("PIPELINE_NO_PAUSE") or not sys.stdin.isatty()):
-            try:
-                input("\n  Appuyez sur Entree pour fermer...")
-            except Exception:
-                pass
+        # [PATCH_NO_PAUSE_v1] (rev.32 B4 bis) Pas de pause si pipeline non interactif
+        # (PIPELINE_NO_PAUSE=1 ou stdin non-TTY) : voir dsv_commun.pause_finale.
+        if "--local" not in sys.argv:
+            commun.pause_finale()

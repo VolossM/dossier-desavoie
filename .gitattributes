@@ -1,0 +1,8 @@
+# Donnees FtM : aucune conversion de fins de ligne. manifest.json porte le SHA-256
+# des octets ecrits par le pipeline (CRLF sous Windows) et index.html recalcule
+# cette empreinte sur le fichier servi : le depot doit stocker ces octets tels quels.
+*.jsonl -text
+
+# Historique des releves : ajouts concurrents (poste Windows, sessions Claude)
+# fusionnes ligne a ligne.
+_dsv/suivi/indicateurs.jsonl -text merge=union

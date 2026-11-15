@@ -7,7 +7,23 @@
 !deploy.py
 !manifest.json
 !init_git.py
+!dsv.py
+!dsv_commun.py
+!dsv_bal.py
+!dsv_audit_poste.py
 !.gitignore
+!.gitattributes
 !data/
 !data/*.jsonl
+!_dsv/
+!_dsv/bal/
+!_dsv/bal/*.json
+!_dsv/suivi/
+!_dsv/suivi/*
+!.claude/
+!.claude/CLAUDE.md
+!.claude/settings.json
+
+# .deploy_config.json : JAMAIS versionne (peut contenir des identifiants).
+# Reste local ; regenere par setup.py.
 .deploy_config.json
